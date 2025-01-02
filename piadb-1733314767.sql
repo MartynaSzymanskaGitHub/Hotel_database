@@ -1,207 +1,132 @@
-use tempdb;
+-- Step 1: Database Creation and Setup
+USE tempdb;
+GO
 
+-- Step 2: Table Definitions with Normalization and Constraints
 CREATE TABLE [Hotels] (
-	[id_hotel] int IDENTITY(1,1) NOT NULL UNIQUE,
-	[hotel_name] nvarchar(100) NOT NULL UNIQUE,
-	[country] nvarchar(100) NOT NULL,
-	[address] int NOT NULL,
-	[total_rooms] int NOT NULL,
-	[manager_name] nvarchar(100) NOT NULL,
-	[contact_number] nvarchar(max) NOT NULL,
-	PRIMARY KEY ([id_hotel])
+	[id_hotel] INT IDENTITY(1,1) PRIMARY KEY,
+	[hotel_name] NVARCHAR(100) NOT NULL UNIQUE,
+	[country] NVARCHAR(100) NOT NULL,
+	[address] NVARCHAR(200) NOT NULL,
+	[total_rooms] INT NOT NULL CHECK ([total_rooms] > 0),
+	[manager_name] NVARCHAR(100) NOT NULL,
+	[contact_number] NVARCHAR(15) NOT NULL,
+	[ModifiedDate] DATETIME2 DEFAULT GETDATE()
 );
 
 CREATE TABLE [Rooms] (
-	[id_room] int IDENTITY(1,1) NOT NULL UNIQUE,
-	[id_hotel] int NOT NULL,
-	[price_per_night] decimal(18,0) NOT NULL,
-	[number_of_rooms] int NOT NULL,
-	[allow_animals] nvarchar(3) NOT NULL,
-	[floor] int NOT NULL,
-	[number_of_beds] int NOT NULL,
-	[room_size] decimal(18,0) NOT NULL,
-	[description] nvarchar(200) NOT NULL,
-	PRIMARY KEY ([id_room])
+	[id_room] INT IDENTITY(1,1) PRIMARY KEY,
+	[id_hotel] INT NOT NULL,
+	[price_per_night] DECIMAL(18,2) NOT NULL CHECK ([price_per_night] > 0),
+	[floor] INT NOT NULL,
+	[number_of_beds] INT NOT NULL CHECK ([number_of_beds] > 0),
+	[room_size] DECIMAL(18,2) NOT NULL CHECK ([room_size] > 0),
+	[description] NVARCHAR(200),
+	[ModifiedDate] DATETIME2 DEFAULT GETDATE(),
+	FOREIGN KEY ([id_hotel]) REFERENCES [Hotels]([id_hotel])
 );
 
 CREATE TABLE [Clients] (
-	[id_client] int IDENTITY(1,1) NOT NULL UNIQUE,
-	[name] nvarchar(50) NOT NULL,
-	[last_name] nvarchar(50) NOT NULL,
-	[contact_number] int NOT NULL UNIQUE,
-	[email] nvarchar(100) NOT NULL,
-	[document_number] nvarchar(50) NOT NULL,
-	[address] nvarchar(100) NOT NULL,
-	[country] nvarchar(100) NOT NULL,
-	[date_of_birth] date NOT NULL,
-	[gender] nvarchar(10) NOT NULL,
-	PRIMARY KEY ([id_client])
+	[id_client] INT IDENTITY(1,1) PRIMARY KEY,
+	[name] NVARCHAR(50) NOT NULL,
+	[last_name] NVARCHAR(50) NOT NULL,
+	[contact_number] NVARCHAR(15) NOT NULL UNIQUE,
+	[email] NVARCHAR(100) NOT NULL,
+	[document_number] NVARCHAR(50) NOT NULL UNIQUE,
+	[address] NVARCHAR(200),
+	[country] NVARCHAR(100) NOT NULL,
+	[date_of_birth] DATE NOT NULL,
+	[gender] NVARCHAR(10) CHECK ([gender] IN ('Male', 'Female', 'Other'))
 );
 
 CREATE TABLE [Reservations] (
-	[id_reservation] int IDENTITY(1,1) NOT NULL UNIQUE,
-	[id_client] int NOT NULL,
-	[reservation_date] date NOT NULL,
-	[data_arrival] date NOT NULL,
-	[data_department] date NOT NULL,
-	[id_room] int NOT NULL,
-	[payment_status] nvarchar(200) NOT NULL,
-	[special_requents] nvarchar(200) NOT NULL,
-	[number_of_people] int NOT NULL,
-	[number_animals] int NOT NULL,
-	[cancellation_policy] nvarchar(max) NOT NULL,
-	[hotel_id] int not null,
-	PRIMARY KEY ([id_reservation])
+	[id_reservation] INT IDENTITY(1,1) PRIMARY KEY,
+	[id_client] INT NOT NULL,
+	[id_room] INT NOT NULL,
+	[reservation_date] DATE NOT NULL,
+	[arrival_date] DATE NOT NULL,
+	[departure_date] DATE NOT NULL CHECK ([departure_date] > [arrival_date]),
+	[payment_status] NVARCHAR(50) NOT NULL CHECK ([payment_status] IN ('Paid', 'Pending', 'Cancelled')),
+	[special_requests] NVARCHAR(200),
+	FOREIGN KEY ([id_client]) REFERENCES [Clients]([id_client]),
+	FOREIGN KEY ([id_room]) REFERENCES [Rooms]([id_room])
 );
 
 CREATE TABLE [Facilities] (
-	[id] int IDENTITY(1,1) NOT NULL UNIQUE,
-	[room_id] int NOT NULL,
-	[number_of_balcons] int NOT NULL,
-	[view] nvarchar(100) NOT NULL,
-	[allow_smoking] nvarchar(10) NOT NULL,
-	[private_bathroom] nvarchar(10) NOT NULL,
-	[private_kitchen] nvarchar(30) NOT NULL,
-	[gym_access] bit NOT NULL,
-	[heating] bit NOT NULL,
-	[air_conditioning] bit NOT NULL,
-	PRIMARY KEY ([id])
+	[id_facility] INT IDENTITY(1,1) PRIMARY KEY,
+	[id_room] INT NOT NULL,
+	[facility_name] NVARCHAR(100) NOT NULL,
+	[facility_description] NVARCHAR(200),
+	FOREIGN KEY ([id_room]) REFERENCES [Rooms]([id_room])
 );
 
 CREATE TABLE [Payments] (
-	[id_payment] int IDENTITY(1,1) NOT NULL UNIQUE,
-	[client_id] int NOT NULL,
-	[reservation_id] int NOT NULL,
-	[status] nvarchar(100) NOT NULL,
-	[payment_date] date,
-	[amount] decimal(18,0) NOT NULL,
-	[currency] nvarchar(50) NOT NULL,
-	[is_refunded] bit NOT NULL,
-	[refund_date] date,
-	PRIMARY KEY ([id_payment])
+	[id_payment] INT IDENTITY(1,1) PRIMARY KEY,
+	[id_reservation] INT NOT NULL,
+	[amount] DECIMAL(18,2) NOT NULL CHECK ([amount] > 0),
+	[payment_date] DATE NOT NULL,
+	[payment_method] NVARCHAR(50) NOT NULL,
+	FOREIGN KEY ([id_reservation]) REFERENCES [Reservations]([id_reservation])
 );
 
 CREATE TABLE [Events] (
-	[id_event] int IDENTITY(1,1) NOT NULL UNIQUE,
-	[hotel_id] int NOT NULL,
-	[event_name] nvarchar(100) NOT NULL,
-	[event_description] nvarchar(400) NOT NULL,
-	[start_date] date NOT NULL,
-	[end_date] date NOT NULL,
-	[max_number_of_guests] int NOT NULL,
-	[organizer_name] nvarchar(100) NOT NULL,
-	[status] nvarchar(100) NOT NULL,
-	PRIMARY KEY ([id_event])
+	[id_event] INT IDENTITY(1,1) PRIMARY KEY,
+	[event_name] NVARCHAR(100) NOT NULL,
+	[event_date] DATE NOT NULL,
+	[location] NVARCHAR(200) NOT NULL,
+	[description] NVARCHAR(200)
 );
 
 CREATE TABLE [EventRegistration] (
-	[id_registration] int IDENTITY(1,1) NOT NULL UNIQUE,
-	[event_id] int NOT NULL,
-	[client_id] int NOT NULL,
-	[number_of_people] int NOT NULL,
-	[registration_date] date NOT NULL,
-	[status] nvarchar(100) NOT NULL,
-	PRIMARY KEY ([id_registration])
+	[id_registration] INT IDENTITY(1,1) PRIMARY KEY,
+	[id_event] INT NOT NULL,
+	[id_client] INT NOT NULL,
+	[registration_date] DATE NOT NULL,
+	FOREIGN KEY ([id_event]) REFERENCES [Events]([id_event]),
+	FOREIGN KEY ([id_client]) REFERENCES [Clients]([id_client])
 );
 
+-- Step 3: Triggers for ModifiedDate Updates
+CREATE TRIGGER trg_UpdateModifiedDate ON [Hotels]
+AFTER UPDATE AS
+BEGIN
+	UPDATE [Hotels]
+	SET [ModifiedDate] = GETDATE()
+	WHERE [id_hotel] IN (SELECT DISTINCT [id_hotel] FROM Inserted);
+END;
 
-ALTER TABLE [Rooms] ADD CONSTRAINT [Rooms_fk] FOREIGN KEY ([id_hotel]) REFERENCES [Hotels]([id_hotel]);
-ALTER TABLE [Reservations] ADD CONSTRAINT [Reservations_Client_FK] FOREIGN KEY ([id_client]) REFERENCES [Clients]([id_client]);
+-- Step 4: Indexing
+CREATE NONCLUSTERED INDEX idx_fk_id_hotel ON [Rooms] ([id_hotel]);
+CREATE NONCLUSTERED INDEX idx_fk_id_client ON [Reservations] ([id_client]);
+CREATE NONCLUSTERED INDEX idx_fk_id_room ON [Facilities] ([id_room]);
+CREATE NONCLUSTERED INDEX idx_fk_id_reservation ON [Payments] ([id_reservation]);
 
-ALTER TABLE [Reservations] ADD CONSTRAINT [Reservations_Hotel_FK] FOREIGN KEY ([hotel_id]) REFERENCES [Hotels]([id_hotel]);
-ALTER TABLE [Reservations] ADD CONSTRAINT [Reservations_Room_FK] FOREIGN KEY ([id_room]) REFERENCES [Rooms]([id_room]);
-ALTER TABLE [Facilities] ADD CONSTRAINT [Facilities_Room_FK] FOREIGN KEY ([room_id]) REFERENCES [Rooms]([id_room]);
-ALTER TABLE [Payments] ADD CONSTRAINT [Payments_Client_FK] FOREIGN KEY ([client_id]) REFERENCES [Clients]([id_client]);
-
-ALTER TABLE [Payments] ADD CONSTRAINT [Payments_Reservation_FK] FOREIGN KEY ([reservation_id]) REFERENCES [Reservations]([id_reservation]);
-ALTER TABLE [Events] ADD CONSTRAINT [Events_Hotel_FK] FOREIGN KEY ([hotel_id]) REFERENCES [Hotels]([id_hotel]);
-ALTER TABLE [EventRegistration] ADD CONSTRAINT [EventRegistration_Event_FK] FOREIGN KEY ([event_id]) REFERENCES [Events]([id_event]);
-
-ALTER TABLE [EventRegistration] ADD CONSTRAINT [EventRegistration_fk2] FOREIGN KEY ([client_id]) REFERENCES [Clients]([id_client]);
-
--- klient rezerwujacy musi byc pe³noletni
-ALTER TABLE [Clients] ADD CONSTRAINT [CK_Clients_Adult] CHECK (DATEDIFF(YEAR, [date_of_birth], GETDATE()) >= 18);
--- sprawdzenie poprawnosci plci
-ALTER TABLE [Clients] ADD CONSTRAINT [CK_Clients_Gender] CHECK ([gender] IN ('Male', 'Female', 'Other'));
-
--- sprawdzenie poprawnosci pokoi
-ALTER TABLE [Rooms] ADD CONSTRAINT [CK_Rooms_Price] CHECK ([price_per_night] > 0);
-ALTER TABLE [Rooms] ADD CONSTRAINT [CK_Rooms_Beds] CHECK ([number_of_beds] >= 1);
-
--- sprawdzenie czy data wyjazdu < data przyjazdu
-ALTER TABLE [Reservations] ADD CONSTRAINT [CK_Reservations_Dates] CHECK ([data_arrival] < [data_department]);
-
-ALTER TABLE [Events] ADD CONSTRAINT [CK_Events_Dates] CHECK ([start_date] < [end_date]);
-
-ALTER TABLE [Clients] ADD CONSTRAINT [CK_Clients_Email] CHECK ([email] LIKE '%_@__%.__%');
-
-
-
-
-
-GO
-CREATE TRIGGER trg_UpdateReservationStatus
-ON [Reservations]
-AFTER UPDATE
+-- Step 5: Stored Procedures for Data Manipulation
+CREATE PROCEDURE sp_InsertHotel
+	@hotel_name NVARCHAR(100),
+	@country NVARCHAR(100),
+	@address NVARCHAR(200),
+	@total_rooms INT,
+	@manager_name NVARCHAR(100),
+	@contact_number NVARCHAR(15)
 AS
 BEGIN
-    IF EXISTS (SELECT 1 FROM inserted WHERE [payment_status] = 'Cancelled')
-    BEGIN
-        UPDATE [Reservations]
-        SET [payment_status] = 'Cancelled'
-        WHERE [id_reservation] IN (SELECT [id_reservation] FROM inserted);
-    END
+	BEGIN TRY
+		INSERT INTO [Hotels] ([hotel_name], [country], [address], [total_rooms], [manager_name], [contact_number])
+		VALUES (@hotel_name, @country, @address, @total_rooms, @manager_name, @contact_number);
+	END TRY
+	BEGIN CATCH
+		THROW;
+	END CATCH
 END;
-GO
 
--- dodanie wartoœci defaultowych
-ALTER TABLE [Facilities]
-ADD CONSTRAINT [DF_Facilities_Heating] DEFAULT 0 FOR [heating],
-             CONSTRAINT [DF_Facilities_AC] DEFAULT 0 FOR [air_conditioning];
-GO
+-- Step 6: User Roles and Permissions
+CREATE LOGIN HotelManager WITH PASSWORD = 'SecurePass123!';
+CREATE USER HotelManagerUser FOR LOGIN HotelManager;
+ALTER ROLE db_datareader ADD MEMBER HotelManagerUser;
+ALTER ROLE db_datawriter ADD MEMBER HotelManagerUser;
 
--- tworzenie indexow
-CREATE NONCLUSTERED INDEX idx_FK_Reservations_Client ON [Reservations] ([id_client]);
-CREATE NONCLUSTERED INDEX idx_FK_Reservations_Room ON [Reservations] ([id_room]);
-CREATE NONCLUSTERED INDEX idx_FK_Payments_Reservation ON [Payments] ([reservation_id]);
-GO
+-- Step 7: Backup
+BACKUP DATABASE tempdb TO DISK = 'C:\Backup\HotelDB_Full.bak' WITH FORMAT;
 
--- sprawdzenie czy pokoj zarezerwowany
-CREATE PROCEDURE AddReservation
-    @id_client INT,
-    @id_room INT,
-    @reservation_date DATE,
-    @data_arrival DATE,
-    @data_department DATE,
-    @number_of_people INT
-AS
-BEGIN
-    BEGIN TRY
-        IF EXISTS (
-            SELECT 1 FROM Reservations
-            WHERE [id_room] = @id_room
-              AND [data_arrival] < @data_department
-              AND [data_department] > @data_arrival
-        )
-        BEGIN
-            THROW 50001, 'Room already reserved for this period.', 1;
-        END
-        INSERT INTO Reservations ([id_client], [id_room], [reservation_date], [data_arrival], [data_department], [number_of_people])
-        VALUES (@id_client, @id_room, @reservation_date, @data_arrival, @data_department, @number_of_people);
-    END TRY
-    BEGIN CATCH
-        PRINT ERROR_MESSAGE();
-    END CATCH
-END;
-GO
-
--- widok na wolne pokoje
-CREATE VIEW AvailableRooms AS
-SELECT r.[id_room], r.[price_per_night], r.[number_of_beds], h.[hotel_name]
-FROM [Rooms] r
-LEFT JOIN [Reservations] res ON r.[id_room] = res.[id_room]
-LEFT JOIN [Hotels] h ON r.[id_hotel] = h.[id_hotel]
-WHERE res.[id_reservation] IS NULL OR res.[data_department] < GETDATE();
-GO
-
-
+-- Additional steps: Sample queries, analytics, and Power BI integration can be added later.

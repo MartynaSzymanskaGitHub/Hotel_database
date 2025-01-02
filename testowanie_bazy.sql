@@ -1,228 +1,213 @@
--- uzupe³nianie bazy danych
-USE tempdb;
-
+-- Wstawianie danych do tabeli Hotels (z przykÅ‚adowym bÅ‚Ä™dem dla duplikatu)
 INSERT INTO [Hotels] 
 ([hotel_name], [country], [address], [total_rooms], [manager_name], [contact_number])
 VALUES 
-('Hotel Paradise', 'USA', 101, 50, 'Alice Green', '123456789'),
-('Grand Royal', 'UK', 102, 80, 'John Brown', '987654321');
+('Hotel Paradise', 'USA', '101 Sunset Blvd', 50, 'Alice Green', '123456789'),
+('Grand Royal', 'UK', '102 High Street', 80, 'John Brown', '987654321'),
+('Empty Hotel', 'France', '104 Rivoli', 1, 'Sophia White', '789123456'),
+('Hotel Atlantis', 'Germany', '105 Oceanview', 120, 'Emma Brown', '123456780');
 
+-- BÅ‚Ä…d: duplikat nazwy hotelu
 INSERT INTO [Hotels] 
 ([hotel_name], [country], [address], [total_rooms], [manager_name], [contact_number])
 VALUES 
-('Empty Hotel', 'France', 104, 1, 'Sophia White', '789123456');
+('Hotel Paradise', 'Canada', '103 Maple Ave', 60, 'David Smith', '456789123');
 
-INSERT INTO [Hotels] 
-([hotel_name], [country], [address], [total_rooms], [manager_name], [contact_number])
-VALUES 
-('Hotel Atlantis', 'Germany', 105, 120, 'Emma Brown', '123456780');
-
--- Hotel z t¹ sam¹ nazw¹ ( zakoñczenie niepowodzeniem )
-INSERT INTO [Hotels] 
-([hotel_name], [country], [address], [total_rooms], [manager_name], [contact_number])
-VALUES 
-('Hotel Paradise', 'Canada', 103, 60, 'David Smith', '456789123'); 
-
--- #2 Dodawanie pokoi
--- Poprawne dane - operacja powinna siê powieœæ
+-- Wstawianie danych do tabeli Rooms (z przykÅ‚adowymi bÅ‚Ä™dami)
 INSERT INTO [Rooms] 
-([id_hotel], [price_per_night], [number_of_rooms], [allow_animals], [floor], [number_of_beds], [room_size], [description])
+([id_hotel], [price_per_night], [floor], [number_of_beds], [room_size], [description])
 VALUES 
-(1, 150.00, 5, 'Yes', 2, 2, 30.00, 'Deluxe room with balcony'); -- Ma siê udaæ
+(1, 150.00, 2, 2, 30.00, 'Deluxe room with balcony'),
+(1, 180.00, 3, 1, 20.00, 'Single room with city view'),
+(2, 300.00, 5, 3, 55.00, 'Family suite with kitchenette');
 
+-- BÅ‚Ä…d: negatywna cena
 INSERT INTO [Rooms] 
-([id_hotel], [price_per_night], [number_of_rooms], [allow_animals], [floor], [number_of_beds], [room_size], [description])
+([id_hotel], [price_per_night], [floor], [number_of_beds], [room_size], [description])
 VALUES 
-(1, 180.00, 1, 'Yes', 3, 1, 20.00, 'Single room with city view'),
-(2, 300.00, 1, 'No', 5, 3, 55.00, 'Family suite with kitchenette'),
-(1, 250.00, 2, 'Yes', 4, 2, 40.00, 'Double room with ocean view'),
-(2, 350.00, 2, 'No', 6, 4, 70.00, 'Penthouse with private pool'),
-(2, 250.00, 3, 'Yes', 4, 2, 40.00, 'Double room with ocean view'),
-(3, 150.00, 1, 'Yes', 2, 2, 35.00, 'Standard double room'),
-(3, 150.00, 2, 'Yes', 2, 2, 25.00, 'Standard double room'),
-(3, 150.00, 3, 'Yes', 2, 2, 40.00, 'Standard double room')
+(1, -50.00, 1, 1, 20.00, 'Single room');
 
-
-
--- Negatywna cena za noc - operacja powinna zakoñczyæ siê b³êdem
+-- BÅ‚Ä…d: liczba Å‚Ã³Å¼ek poniÅ¼ej 1
 INSERT INTO [Rooms] 
-([id_hotel], [price_per_night], [number_of_rooms], [allow_animals], [floor], [number_of_beds], [room_size], [description])
+([id_hotel], [price_per_night], [floor], [number_of_beds], [room_size], [description])
 VALUES 
-(1, -50.00, 2, 'No', 1, 1, 20.00, 'Single room'); -- Ma siê nie udaæ
+(1, 120.00, 3, 0, 25.00, 'Small room');
 
--- Liczba ³ó¿ek poni¿ej 1 - operacja powinna zakoñczyæ siê b³êdem
-INSERT INTO [Rooms] 
-([id_hotel], [price_per_night], [number_of_rooms], [allow_animals], [floor], [number_of_beds], [room_size], [description])
-VALUES 
-(1, 120.00, 3, 'No', 1, 0, 25.00, 'Small room'); -- Ma siê nie udaæ
-
-
--- Poprawne dane - operacja powinna siê powieœæ
+-- Wstawianie danych do tabeli Clients
 INSERT INTO [Clients] 
 ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
 VALUES 
-('John', 'Doe', 123456789, 'john.doe@example.com', 'ID12345', '123 Main St', 'USA', '2000-01-01', 'Male'); -- Ma siê udaæ
+('John', 'Doe', '123456789', 'john.doe@example.com', 'ID12345', '123 Main St', 'USA', '2000-01-01', 'Male'),
+('Sophia', 'Davis', '234567891', 'sophia.davis@example.com', 'ID54321', '234 Elm St', 'USA', '1990-03-15', 'Female');
 
+-- BÅ‚Ä…d: niepeÅ‚noletni klient
 INSERT INTO [Clients] 
 ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
 VALUES 
-('Sophia', 'Davis', 234567891, 'sophia.davis@example.com', 'ID54321', '234 Elm St', 'USA', '1990-03-15', 'Female'),
-('James', 'Wilson', 345678912, 'james.wilson@example.com', 'ID67890', '456 Oak St', 'Canada', '1985-07-20', 'Male'),
-('Mia', 'Johnson', 456789123, 'mia.johnson@example.com', 'ID78901', '567 Pine St', 'UK', '1995-12-25', 'Female'),
-('Noah', 'Martinez', 567891234, 'noah.martinez@example.com', 'ID89012', '678 Birch St', 'Germany', '1988-09-10', 'Male');
+('Jane', 'Smith', '987654321', 'jane.smith@example.com', 'ID54321', '456 Another St', 'Canada', '2010-05-15', 'Female');
 
-
--- Niepe³noletni klient - operacja powinna zakoñczyæ siê b³êdem
+-- BÅ‚Ä…d: nieprawidÅ‚owy adres e-mail
 INSERT INTO [Clients] 
 ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
 VALUES 
-('Jane', 'Smith', 987654321, 'jane.smith@example.com', 'ID54321', '456 Another St', 'Canada', '2010-05-15', 'Female'); -- Ma siê nie udaæ
+('Invalid', 'Email', '123456789', 'invalid-email', 'ID99999', '123 Fake St', 'USA', '1990-01-01', 'Male');
 
--- Klient z niepoprawnym adresem e-mail
-INSERT INTO [Clients] ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
-VALUES ('Invalid', 'Email', 123456789, 'invalid-email', 'ID99999', '123 Fake St', 'USA', '1990-01-01', 'Male'); -- Ma siê nie udaæ
-
-
-
--- #3 Dodawanie rezerwacji
--- Poprawna rezerwacja - operacja powinna siê powieœæ
-INSERT INTO [Reservations]
-([id_client], [reservation_date], [data_arrival], [data_department], [id_room], [payment_status], [special_requents], [number_of_people], [number_animals], [cancellation_policy],[hotel_id])
+-- Wstawianie danych do tabeli Reservations (z przykÅ‚adowymi bÅ‚Ä™dami)
+INSERT INTO [Reservations] 
+([id_client], [id_room], [reservation_date], [arrival_date], [departure_date], [payment_status], [special_requests])
 VALUES 
-(1, GETDATE(), '2024-12-25', '2024-12-30', 1, 'Pending', 'No special requirements', 2, 0, '24-hour notice',1); -- Ma siê udaæ
+(1, 1, GETDATE(), '2024-12-25', '2024-12-30', 'Pending', 'No special requirements'),
+(2, 2, GETDATE(), '2024-12-15', '2024-12-20', 'Confirmed', 'Late arrival');
 
-INSERT INTO [Reservations]
-([id_client], [reservation_date], [data_arrival], [data_department], [id_room], [payment_status], [special_requents], [number_of_people], [number_animals], [cancellation_policy],[hotel_id])
+-- BÅ‚Ä…d: data przyjazdu po dacie wyjazdu
+INSERT INTO [Reservations] 
+([id_client], [id_room], [reservation_date], [arrival_date], [departure_date], [payment_status], [special_requests])
 VALUES 
-(2, GETDATE(), '2024-12-15', '2024-12-20', 2, 'Confirmed', 'Late arrival', 2, 0, 'Non-refundable',1),
-(3, GETDATE(), '2024-12-22', '2024-12-28', 3, 'Pending', 'No special requests', 3, 0, '24-hour notice',2),
-(4, GETDATE(), '2024-12-29', '2025-01-03', 5, 'Confirmed', 'Early check-in', 4, 1, 'Flexible',2);
+(1, 1, GETDATE(), '2024-12-30', '2024-12-25', 'Pending', 'Late check-in');
 
-Select * from clients
-Select * from rooms
-
--- Rezerwacja z dat¹ przyjazdu po dacie wyjazdu - operacja powinna zakoñczyæ siê b³êdem
-INSERT INTO [Reservations]
-([id_client], [reservation_date], [data_arrival], [data_department], [id_room], [payment_status], [special_requents], [number_of_people], [number_animals], [cancellation_policy],[hotel_id])
+-- BÅ‚Ä…d: pokÃ³j juÅ¼ zarezerwowany
+INSERT INTO [Reservations] 
+([id_client], [id_room], [reservation_date], [arrival_date], [departure_date], [payment_status], [special_requests])
 VALUES 
-(1, GETDATE(), '2024-12-30', '2024-12-25', 1, 'Pending', 'Late check-in', 1, 0, 'Flexible',1); -- Ma siê nie udaæ
+(2, 1, GETDATE(), '2024-12-27', '2024-12-28', 'Pending', 'Early check-in');
 
--- Rezerwacja pokoju ju¿ zajêtego w danym okresie - operacja powinna zakoñczyæ siê b³êdem
-INSERT INTO [Reservations]
-([id_client], [reservation_date], [data_arrival], [data_department], [id_room], [payment_status], [special_requents], [number_of_people], [number_animals], [cancellation_policy],[hotel_id])
-VALUES 
-(2, GETDATE(), '2024-12-27', '2024-12-28', 1, 'Pending', 'Early check-in', 1, 0, 'Non-refundable',1); -- Ma siê nie udaæ
+-- PrzykÅ‚adowe zapytania walidacyjne i testowe
+SELECT * FROM [Clients] WHERE DATEDIFF(YEAR, [date_of_birth], GETDATE()) < 18;
+SELECT * FROM [Rooms] WHERE [price_per_night] <= 0;
+SELECT * FROM [Reservations] WHERE [arrival_date] >= [departure_date];
 
-
+-- Wstawianie danych do tabeli Payments
 INSERT INTO [Payments]
-([client_id], [reservation_id], [status], [payment_date], [amount], [currency], [is_refunded], [refund_date])
-VALUES 
-(2, 1, 'Paid', GETDATE(), 900.00, 'USD', 0, NULL),
-(3, 2, 'Pending', NULL, 1800.00, 'USD', 0, NULL),
-(4, 3, 'Paid', GETDATE(), 2100.00, 'EUR', 0, NULL);
+([id_reservation], [amount], [payment_date], [payment_method])
+VALUES
+(1, 900.00, GETDATE(), 'Credit Card'),
+(2, 1800.00, GETDATE(), 'Bank Transfer'),
+(3, 2100.00, GETDATE(), 'Cash');
 
-INSERT INTO [EventRegistration]
-([event_id], [client_id], [number_of_people], [registration_date], [status])
-VALUES 
-(1, 2, 2, GETDATE(), 'Confirmed'),
-(2, 3, 1, GETDATE(), 'Pending'),
-(3, 4, 4, GETDATE(), 'Confirmed');
+-- BÅ‚Ä…d: brak kwoty
+INSERT INTO [Payments]
+([id_reservation], [amount], [payment_date], [payment_method])
+VALUES
+(1, NULL, GETDATE(), 'Credit Card'); -- Powinno zakoÅ„czyÄ‡ siÄ™ bÅ‚Ä™dem
 
+-- BÅ‚Ä…d: brak metody pÅ‚atnoÅ›ci
+INSERT INTO [Payments]
+([id_reservation], [amount], [payment_date], [payment_method])
+VALUES
+(1, 500.00, GETDATE(), NULL); -- Powinno zakoÅ„czyÄ‡ siÄ™ bÅ‚Ä™dem
 
+-- Wstawianie danych do tabeli Events
 INSERT INTO [Events]
-([hotel_id], [event_name], [event_description], [start_date], [end_date], [max_number_of_guests], [organizer_name], [status])
-VALUES 
-(1, 'Christmas Gala', 'A grand Christmas celebration for guests', '2024-12-24', '2024-12-25', 150, 'Alice Green', 'Scheduled'),
-(2, 'Corporate Retreat', 'A retreat for corporate teams', '2024-12-15', '2024-12-17', 50, 'Liam Smith', 'Scheduled'),
-(3, 'New Year Party', 'Ring in the New Year with us!', '2024-12-31', '2025-01-01', 200, 'Emma Brown', 'Scheduled');
+([event_name], [event_date], [location], [description])
+VALUES
+('Christmas Gala', '2024-12-24', 'Main Ballroom', 'A grand Christmas celebration'),
+('Corporate Retreat', '2024-12-15', 'Conference Room', 'A retreat for corporate teams'),
+('New Year Party', '2024-12-31', 'Rooftop Terrace', 'Celebrate the New Year with us!');
 
+-- BÅ‚Ä…d: data wydarzenia w przeszÅ‚oÅ›ci
+INSERT INTO [Events]
+([event_name], [event_date], [location], [description])
+VALUES
+('Past Event', '2020-01-01', 'Old Hall', 'This event is in the past'); -- Powinno zakoÅ„czyÄ‡ siÄ™ bÅ‚Ä™dem
 
--- Wydarzenie z b³êdnymi datami
-INSERT INTO [Events] ([hotel_id], [event_name], [event_description], [start_date], [end_date], [max_number_of_guests], [organizer_name], [status])
-VALUES (1, 'Invalid Event', 'Test invalid dates', '2024-12-25', '2024-12-20', 50, 'Invalid Organizer', 'Scheduled'); -- Ma siê nie udaæ
+-- Wstawianie danych do tabeli EventRegistration
+INSERT INTO [EventRegistration]
+([id_event], [id_client], [registration_date])
+VALUES
+(1, 1, GETDATE()),
+(2, 2, GETDATE());
 
+-- BÅ‚Ä…d: brak klienta
+INSERT INTO [EventRegistration]
+([id_event], [id_client], [registration_date])
+VALUES
+(3, NULL, GETDATE()); -- Powinno zakoÅ„czyÄ‡ siÄ™ bÅ‚Ä™dem
 
--- #4 Testowanie wyzwalacza na zmianê statusu rezerwacji
--- Zmiana statusu rezerwacji na "Cancelled" - operacja powinna siê powieœæ
-UPDATE [Reservations]
-SET [payment_status] = 'Cancelled'
-WHERE [id_reservation] = 2; -- Ma siê udaæ
-
-
--- #5 Dodawanie p³atnoœci
--- Poprawna p³atnoœæ - operacja powinna siê powieœæ
-INSERT INTO [Payments]
-([client_id], [reservation_id], [status], [payment_date], [amount], [currency], [is_refunded], [refund_date])
-VALUES 
-(1, 1, 'Paid', GETDATE(), 500.00, 'USD', 0, NULL); -- Ma siê udaæ
-
--- P³atnoœæ z nieprawid³ow¹ walut¹ (NULL) - operacja powinna zakoñczyæ siê b³êdem
-INSERT INTO [Payments]
-([client_id], [reservation_id], [status], [payment_date], [amount], [currency], [is_refunded], [refund_date])
-VALUES 
-(1, 1,'Paid', GETDATE(), 500.00, NULL, 0, NULL); -- Ma siê nie udaæ
-
-
+-- BÅ‚Ä…d: brak wydarzenia
+INSERT INTO [EventRegistration]
+([id_event], [id_client], [registration_date])
+VALUES
+(NULL, 1, GETDATE()); -- Powinno zakoÅ„czyÄ‡ siÄ™ bÅ‚Ä™dem
 
 
 -- #6 Testowanie widoku AvailableRooms
--- Sprawdzenie dostêpnych pokoi - powinno zwróciæ dostêpne pokoje
-SELECT * FROM AvailableRooms; -- Ma zwróciæ pokoje, które nie s¹ zarezerwowane
+-- Sprawdzenie dostÄ™pnych pokoi - powinno zwrÃ³ciÄ‡ pokoje, ktÃ³re nie sÄ… zarezerwowane w danym okresie
+SELECT r.*
+FROM [Rooms] r
+LEFT JOIN [Reservations] res
+  ON r.[id_room] = res.[id_room]
+  AND res.[arrival_date] <= GETDATE()
+  AND res.[departure_date] >= GETDATE()
+WHERE res.[id_reservation] IS NULL;
 
-
+-- Sprawdzenie poprawnoÅ›ci wieku klientÃ³w (wszyscy klienci muszÄ… byÄ‡ peÅ‚noletni)
 SELECT *
-FROM [Hotels]
-
--- sprawdzenie poprawnosci wieku klientow
-SELECT * 
 FROM [Clients]
 WHERE DATEDIFF(YEAR, [date_of_birth], GETDATE()) < 18;
 
-
-SELECT * 
+-- Sprawdzenie poprawnoÅ›ci adresÃ³w e-mail
+SELECT *
 FROM [Clients]
 WHERE [email] NOT LIKE '%_@__%.__%';
 
-
-SELECT * 
+-- Sprawdzenie poprawnoÅ›ci dat w rezerwacjach (data przyjazdu nie moÅ¼e byÄ‡ pÃ³Åºniejsza niÅ¼ data wyjazdu)
+SELECT *
 FROM [Reservations]
-WHERE [data_arrival] >= [data_department];
+WHERE [arrival_date] >= [departure_date];
 
--- Sprawdzenie, czy pokój zosta³ podwójnie zarezerwowany na ten sam okres:
+-- Sprawdzenie, czy pokÃ³j zostaÅ‚ podwÃ³jnie zarezerwowany na ten sam okres
 SELECT r1.*
 FROM [Reservations] r1
 JOIN [Reservations] r2
   ON r1.[id_room] = r2.[id_room]
  AND r1.[id_reservation] <> r2.[id_reservation]
- AND r1.[data_arrival] < r2.[data_department]
- AND r1.[data_department] > r2.[data_arrival];
+ AND r1.[arrival_date] < r2.[departure_date]
+ AND r1.[departure_date] > r2.[arrival_date];
 
-
- --Sprawdzenie wszystkich wierszy w tabelach z kluczami obcymi, które nie maj¹ dopasowanych kluczy g³ównych:
-
- SELECT *
+-- Sprawdzenie, czy istniejÄ… pokoje przypisane do nieistniejÄ…cych hoteli
+SELECT *
 FROM [Rooms]
 WHERE [id_hotel] NOT IN (SELECT [id_hotel] FROM [Hotels]);
 
+-- Sprawdzenie, czy istniejÄ… udogodnienia przypisane do nieistniejÄ…cych pokoi
 SELECT *
 FROM [Facilities]
-WHERE [room_id] NOT IN (SELECT [id_room] FROM [Rooms]);
+WHERE [id_room] NOT IN (SELECT [id_room] FROM [Rooms]);
 
+-- Sprawdzenie, czy istniejÄ… pÅ‚atnoÅ›ci przypisane do nieistniejÄ…cych rezerwacji
 SELECT *
 FROM [Payments]
-WHERE [reservation_id] NOT IN (SELECT [id_reservation] FROM [Reservations]);
+WHERE [id_reservation] NOT IN (SELECT [id_reservation] FROM [Reservations]);
 
+-- Sprawdzenie, czy istniejÄ… rejestracje na wydarzenia przypisane do nieistniejÄ…cych klientÃ³w lub wydarzeÅ„
+SELECT *
+FROM [EventRegistration]
+WHERE [id_event] NOT IN (SELECT [id_event] FROM [Events])
+   OR [id_client] NOT IN (SELECT [id_client] FROM [Clients]);
 
--- ilosc prezerwacji
-SELECT [data_arrival], COUNT(*) AS [NumberOfReservations]
-FROM Reservations
-GROUP BY [data_arrival]
-ORDER BY [data_arrival];
+-- Sprawdzenie, czy w tabeli Events sÄ… bÅ‚Ä™dne daty (data wydarzenia nie moÅ¼e byÄ‡ w przeszÅ‚oÅ›ci)
+SELECT *
+FROM [Events]
+WHERE [event_date] < GETDATE();
 
+-- Liczba rezerwacji w danym dniu
+SELECT [arrival_date], COUNT(*) AS [NumberOfReservations]
+FROM [Reservations]
+GROUP BY [arrival_date]
+ORDER BY [arrival_date];
 
+-- Liczba rezerwacji przypisana do kaÅ¼dego klienta
 SELECT c.[name], c.[last_name], COUNT(r.[id_reservation]) AS [NumberOfReservations]
-FROM Clients c
-JOIN Reservations r ON c.[id_client] = r.[id_client]
+FROM [Clients] c
+LEFT JOIN [Reservations] r
+  ON c.[id_client] = r.[id_client]
 GROUP BY c.[name], c.[last_name]
 ORDER BY [NumberOfReservations] DESC;
 
+-- Liczba wydarzeÅ„ zarejestrowanych w hotelach
+SELECT h.[hotel_name], COUNT(e.[id_event]) AS [NumberOfEvents]
+FROM [Hotels] h
+LEFT JOIN [Events] e
+  ON h.[id_hotel] = e.[id_event]
+GROUP BY h.[hotel_name]
+ORDER BY [NumberOfEvents] DESC;
