@@ -202,7 +202,7 @@ BEGIN
 END;
 GO
 
-CREATE PROCEDURE sp_InsertClient
+CREATE OR ALTER PROCEDURE sp_InsertClient
     @name NVARCHAR(50),
     @last_name NVARCHAR(50),
     @contact_number NVARCHAR(15),
@@ -215,6 +215,21 @@ CREATE PROCEDURE sp_InsertClient
 AS
 BEGIN
     BEGIN TRY
+        -- Sprawdzenie poprawnoœci adresu e-mail
+        IF @email NOT LIKE '%_@__%.__%'
+        BEGIN
+            RAISERROR('Nieprawid³owy format adresu e-mail!', 16, 1);
+            RETURN;
+        END
+
+        -- Sprawdzenie poprawnoœci numeru telefonu (tylko cyfry, d³ugoœæ 9-15 znaków)
+        IF @contact_number NOT LIKE '%[0-9]%' OR LEN(@contact_number) < 9 OR LEN(@contact_number) > 15
+        BEGIN
+            RAISERROR('Nieprawid³owy format numeru telefonu!', 16, 1);
+            RETURN;
+        END
+        
+        -- Wstawienie klienta
         INSERT INTO [Clients] ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
         VALUES (@name, @last_name, @contact_number, @email, @document_number, @address, @country, @date_of_birth, @gender);
     END TRY
@@ -278,7 +293,7 @@ BEGIN
         THROW;
     END CATCH;
 END;
-GO;
+GO
 
 -- ## Wstawianie danych do tabeli Hotels ##
 
@@ -506,14 +521,6 @@ LEFT JOIN [Reservations] r
 GROUP BY c.[name], c.[last_name]
 ORDER BY [NumberOfReservations] DESC;
 
--- Liczba wydarzeñ zarejestrowanych w hotelach
-SELECT h.[hotel_name], COUNT(e.[id_event]) AS [NumberOfEvents]
-FROM [Hotels] h
-LEFT JOIN [Events] e
-  ON h.[id_hotel] = e.[id_event]
-GROUP BY h.[hotel_name]
-ORDER BY [NumberOfEvents] DESC;
-
 -- Przyk³adowe zapytanie do odczytania rezerwacji
 SELECT 
     r.id_reservation, 
@@ -530,7 +537,7 @@ JOIN Clients c ON r.id_client = c.id_client;
 -- Przyk³adowe zapytanie analityczne
 -- Wyœwietlenie liczby rezerwacji wykonanych przez ka¿dego pracownika w danym miesi¹cu
 -- Widok pokazuj¹cy liczbê rezerwacji w ka¿dym pokoju w hotelu
-go;
+go
 CREATE VIEW RoomReservationSummary AS
 SELECT 
     h.hotel_name, 
@@ -540,10 +547,18 @@ FROM Hotels h
 JOIN Rooms r ON h.id_hotel = r.id_hotel
 LEFT JOIN Reservations res ON r.id_room = res.id_room
 GROUP BY h.hotel_name, r.id_room;
-go;
+go
 
 -- Zapytanie wykorzystuj¹ce widok do wyœwietlenia liczby rezerwacji w hotelach
 SELECT * 
 FROM RoomReservationSummary
 WHERE total_reservations > 0
 ORDER BY total_reservations DESC;
+
+
+--Liczba uczestników ka¿dego wydarzenia:
+SELECT e.event_name, COUNT(er.id_registration) AS total_participants
+FROM Events e
+LEFT JOIN EventRegistration er ON e.id_event = er.id_event
+GROUP BY e.event_name
+ORDER BY total_participants DESC;
