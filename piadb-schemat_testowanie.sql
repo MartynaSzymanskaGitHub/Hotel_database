@@ -374,6 +374,17 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
+
+-- (nieprawidlowa p³eæ) - b³¹d
+BEGIN TRY
+    EXEC sp_InsertClient N'Jane', N'Malik', N'987654300', N'jane.smith@example.com', N'ID54321', N'456 Another St', N'Canada', '2000-05-15', N'Unknown';
+END TRY
+BEGIN CATCH
+    PRINT 'Error: Invalid data! Different from : Male, Female, Other!';
+    THROW;
+END CATCH;
+
+
 -- poprawne
 BEGIN TRY
     EXEC sp_InsertReservation 
