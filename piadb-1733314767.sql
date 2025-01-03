@@ -1,13 +1,11 @@
--- Step 1: Database Creation and Setup
+-- 1. Utworzenie bazy
 CREATE DATABASE HOTELDB;
 ALTER DATABASE HOTELDB COLLATE Polish_CS_AS;
-
-
 
 USE HOTELDB;
 GO
 
--- Step 2: Table Definitions with Normalization and Constraints
+--2. Schematy baz danych
 CREATE TABLE [Hotels] (
     [id_hotel] INT IDENTITY(1,1) PRIMARY KEY,
     [hotel_name] NVARCHAR(100) NOT NULL UNIQUE,
@@ -100,14 +98,14 @@ CREATE TABLE [EventRegistration] (
 );
 GO
 
--- Step 3: Indexing
+-- 3. Indexowanie
 CREATE NONCLUSTERED INDEX idx_fk_id_hotel ON [Rooms] ([id_hotel]);
 CREATE NONCLUSTERED INDEX idx_fk_id_client ON [Reservations] ([id_client]);
 CREATE NONCLUSTERED INDEX idx_fk_id_room ON [Facilities] ([id_room]);
 CREATE NONCLUSTERED INDEX idx_fk_id_reservation ON [Payments] ([id_reservation]);
 GO
 
--- Step 4: Triggers
+-- 4. Tworzenie triggerów
 CREATE TRIGGER trg_UpdateModifiedDate ON [Hotels]
 AFTER UPDATE
 AS
@@ -160,7 +158,7 @@ BEGIN
           AND r.[payment_status] != 'Cancelled'
     )
     BEGIN
-        RAISERROR('Pokój jest ju¿ zarezerwowany w podanym terminie.', 16, 1);
+        RAISERROR('Room is already reserved in given time.', 16, 1);
         ROLLBACK TRANSACTION;
     END
     ELSE
@@ -182,7 +180,7 @@ BEGIN
 END;
 GO
 
--- Step 5: Stored Procedures
+-- 5. Tworzenie procedur
 CREATE PROCEDURE sp_InsertHotel
     @hotel_name NVARCHAR(100),
     @country NVARCHAR(100),
@@ -215,21 +213,22 @@ CREATE OR ALTER PROCEDURE sp_InsertClient
 AS
 BEGIN
     BEGIN TRY
-        -- Sprawdzenie poprawnoœci adresu e-mail
         IF @email NOT LIKE '%_@__%.__%'
         BEGIN
-            RAISERROR('Nieprawid³owy format adresu e-mail!', 16, 1);
+            RAISERROR('Invalid email address format!', 16, 1);
+            RETURN;
+        END
+        IF @contact_number NOT LIKE '%[0-9]%' OR LEN(@contact_number) < 9 OR LEN(@contact_number) > 15
+        BEGIN
+            RAISERROR('Invalid phone number format!', 16, 1);
+            RETURN;
+        END
+		IF @gender NOT IN ('Male', 'Female', 'Other')
+        BEGIN
+            RAISERROR('Invalid gender value! Allowed values: Male, Female, Other.', 16, 1);
             RETURN;
         END
 
-        -- Sprawdzenie poprawnoœci numeru telefonu (tylko cyfry, d³ugoœæ 9-15 znaków)
-        IF @contact_number NOT LIKE '%[0-9]%' OR LEN(@contact_number) < 9 OR LEN(@contact_number) > 15
-        BEGIN
-            RAISERROR('Nieprawid³owy format numeru telefonu!', 16, 1);
-            RETURN;
-        END
-        
-        -- Wstawienie klienta
         INSERT INTO [Clients] ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
         VALUES (@name, @last_name, @contact_number, @email, @document_number, @address, @country, @date_of_birth, @gender);
     END TRY
@@ -295,9 +294,9 @@ BEGIN
 END;
 GO
 
--- ## Wstawianie danych do tabeli Hotels ##
+-- 6. Wstawianie przyk³adowych danych
 
--- Poprawne
+-- poprawne
 BEGIN TRY
     EXEC sp_InsertHotel N'Hotel Paradise', N'USA', N'101 Sunset Blvd', 50, N'Alice Green', N'123456789';
     EXEC sp_InsertHotel N'Grand Royal', N'UK', N'102 High Street', 80, N'John Brown', N'987654321';
@@ -305,152 +304,140 @@ BEGIN TRY
     EXEC sp_InsertHotel N'Hotel Atlantis', N'Germany', N'105 Oceanview', 120, N'Emma Brown', N'123456780';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d wstawiania do tabeli Hotels';
+    PRINT 'Error inserting data to Hotel';
     THROW;
 END CATCH;
 
--- B³êdne (duplikat nazwy hotelu)
+-- (duplikat nazwy hotelu) - b³¹d
 BEGIN TRY
     EXEC sp_InsertHotel N'Hotel Paradise', N'Canada', N'103 Maple Ave', 60, N'David Smith', N'456789123';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d: duplikat nazwy hotelu!';
+    PRINT 'Error: Given name is already in base!';
     THROW;
 END CATCH;
 
--- ## Wstawianie danych do tabeli Rooms ##
-
--- Poprawne
+-- poprawne
 BEGIN TRY
     EXEC sp_InsertRoom 1, 150.00, 2, 2, 30.00, N'Deluxe room with balcony';
     EXEC sp_InsertRoom 1, 180.00, 3, 1, 20.00, N'Single room with city view';
     EXEC sp_InsertRoom 2, 300.00, 5, 3, 55.00, N'Family suite with kitchenette';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d wstawiania do tabeli Rooms';
+    PRINT 'Error inserting data to Rooms';
     THROW;
 END CATCH;
 
--- B³êdne (negatywna cena)
+-- (negatywna cena) - b³¹d
 BEGIN TRY
     EXEC sp_InsertRoom 1, -50.00, 1, 1, 20.00, N'Single room';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d: negatywna cena!';
+    PRINT 'Error: invalid price!';
     THROW;
 END CATCH;
 
--- B³êdne (liczba ³ó¿ek poni¿ej 1)
+-- (liczba ³ó¿ek poni¿ej 1) -  b³¹d
 BEGIN TRY
     EXEC sp_InsertRoom 1, 120.00, 3, 0, 25.00, N'Small room';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d: liczba ³ó¿ek musi byæ wiêksza od 0!';
+    PRINT 'Error: Given bed number must be positive!';
     THROW;
 END CATCH;
 
--- ## Wstawianie danych do tabeli Clients ##
-
--- Poprawne
+-- poprawne
 BEGIN TRY
     EXEC sp_InsertClient N'John', N'Doe', N'123456789', N'john.doe@example.com', N'ID12345', N'123 Main St', N'USA', '2000-01-01', N'Male';
     EXEC sp_InsertClient N'Sophia', N'Davis', N'234567891', N'sophia.davis@example.com', N'ID54321', N'234 Elm St', N'USA', '1990-03-15', N'Female';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d wstawiania do tabeli Clients';
+    PRINT 'Error inserting data to Clients';
     THROW;
 END CATCH;
 
--- B³êdne (niepe³noletni klient)
+-- (niepe³noletni klient) - b³¹d
 BEGIN TRY
     EXEC sp_InsertClient N'Jane', N'Smith', N'987654321', N'jane.smith@example.com', N'ID54321', N'456 Another St', N'Canada', '2010-05-15', N'Female';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d: klient musi byæ pe³noletni!';
+    PRINT 'Error: Client underage!';
     THROW;
 END CATCH;
 
--- B³êdne (nieprawid³owy adres e-mail)
+-- (nieprawid³owy adres e-mail) - b³¹d
 BEGIN TRY
     EXEC sp_InsertClient N'Invalid', N'Email', N'123456789', N'invalid-email', N'ID99999', N'123 Fake St', N'USA', '1990-01-01', N'Male';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d: nieprawid³owy adres e-mail!';
+    PRINT 'Error: invalid address e-mail format!';
     THROW;
 END CATCH;
 
--- ## Wstawianie danych do tabeli Reservations ##
-
--- Poprawne
+-- poprawne
 BEGIN TRY
-    -- Wstawienie pierwszej rezerwacji
     EXEC sp_InsertReservation 
         @id_client = 1, 
         @id_room = 1, 
-        @reservation_date = '2025-01-01', -- U¿ycie konkretnej daty zamiast GETDATE()
+        @reservation_date = '2025-01-01',
         @arrival_date = '2024-12-25', 
         @departure_date = '2024-12-30', 
         @payment_status = N'Pending', 
         @special_requests = N'No special requirements';
 
-    -- Wstawienie drugiej rezerwacji
     EXEC sp_InsertReservation 
         @id_client = 2, 
         @id_room = 2, 
-        @reservation_date = '2025-01-02', -- U¿ycie konkretnej daty zamiast GETDATE()
+        @reservation_date = '2025-01-02', 
         @arrival_date = '2024-12-15', 
         @departure_date = '2024-12-20', 
         @payment_status = N'Pending', 
         @special_requests = N'Late arrival';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d wstawiania do tabeli Reservations';
+    PRINT 'Error inserting data to Reservations';
     THROW;
 END CATCH;
 
 
--- B³êdne (pokój ju¿ zarezerwowany)
+-- (pokój ju¿ zarezerwowany) - b³¹d
 BEGIN TRY
     EXEC sp_InsertReservation 2, 1, '2024-12-20', '2024-12-27', '2024-12-28', N'Pending', N'Early check-in';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d: pokój ju¿ zarezerwowany w tym okresie!';
+    PRINT 'Error: Room is already reserved!';
     THROW;
 END CATCH;
 
--- ## Wstawianie danych do tabeli Payments ##
-
--- Poprawne
+-- poprawne
 BEGIN TRY
     EXEC sp_InsertPayment 1, 900.00, '2024-12-15', N'Credit Card';
     EXEC sp_InsertPayment 2, 1800.00, '2024-12-20', N'Bank Transfer';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d wstawiania do tabeli Payments';
+    PRINT 'Error inserting data to Payments';
     THROW;
 END CATCH;
 
--- B³êdne (brak kwoty p³atnoœci)
+-- (brak kwoty p³atnoœci) - b³¹d
 BEGIN TRY
     EXEC sp_InsertPayment 1, NULL, '2024-12-15', N'Credit Card';
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d: brak kwoty p³atnoœci!';
+    PRINT 'Error: Missing payment value!';
     THROW;
 END CATCH;
 
--- B³êdne (brak metody p³atnoœci)
+--(brak metody p³atnoœci) b³¹d
 BEGIN TRY
     EXEC sp_InsertPayment 1, 500.00, '2024-12-15', NULL;
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d: brak metody p³atnoœci!';
+    PRINT 'Error: missing payment type!';
     THROW;
 END CATCH;
 
--- ## Wstawianie danych do tabeli Events ##
-
--- Poprawne
+-- poprawne
 BEGIN TRY
     INSERT INTO [Events] ([event_name], [event_date], [location], [description])
     VALUES
@@ -459,13 +446,11 @@ BEGIN TRY
     (N'New Year Party', '2024-12-31', N'Rooftop Terrace', N'Celebrate the New Year with us!');
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d wstawiania do tabeli Events';
+    PRINT 'Error: inserting data to Events';
     THROW;
 END CATCH;
 
--- ## Wstawianie danych do tabeli EventRegistration ##
-
--- Poprawne
+-- poprawne
 BEGIN TRY
     INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
     VALUES
@@ -473,32 +458,31 @@ BEGIN TRY
     (2, 2, '2024-12-11');
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d wstawiania do tabeli EventRegistration';
+    PRINT 'Error: inserting data to EventRegistration';
     THROW;
 END CATCH;
 
--- B³êdne (brak klienta)
+-- (brak klienta) - b³¹d
 BEGIN TRY
     INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
     VALUES (3, NULL, '2024-12-11');
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d: brak klienta!';
+    PRINT 'Error: missing client data!';
     THROW;
 END CATCH;
 
--- B³êdne (brak wydarzenia)
+-- (brak wydarzenia) - b³¹d
 BEGIN TRY
     INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
     VALUES (NULL, 1, '2024-12-11');
 END TRY
 BEGIN CATCH
-    PRINT 'B³¹d: brak wydarzenia!';
+    PRINT 'Error: invalid event!';
     THROW;
 END CATCH;
 
--- #6 Testowanie widoku AvailableRooms
--- Sprawdzenie dostêpnych pokoi - powinno zwróciæ pokoje, które nie s¹ zarezerwowane w danym okresie
+-- zwraca pokoje, które nie s¹ zarezerwowane w podanym czasie
 SELECT r.*
 FROM [Rooms] r
 LEFT JOIN [Reservations] res
@@ -507,13 +491,13 @@ LEFT JOIN [Reservations] res
   AND res.[departure_date] >= '2024-12-10'
 WHERE res.[id_reservation] IS NULL;
 
--- Liczba rezerwacji w danym dniu
+-- rezerwacje w danym dniu
 SELECT [arrival_date], COUNT(*) AS [NumberOfReservations]
 FROM [Reservations]
 GROUP BY [arrival_date]
 ORDER BY [arrival_date];
 
--- Liczba rezerwacji przypisana do ka¿dego klienta
+--liczba rezerwacji klientów
 SELECT c.[name], c.[last_name], COUNT(r.[id_reservation]) AS [NumberOfReservations]
 FROM [Clients] c
 LEFT JOIN [Reservations] r
@@ -521,7 +505,7 @@ LEFT JOIN [Reservations] r
 GROUP BY c.[name], c.[last_name]
 ORDER BY [NumberOfReservations] DESC;
 
--- Przyk³adowe zapytanie do odczytania rezerwacji
+-- odczytanie rezerwacji
 SELECT 
     r.id_reservation, 
     r.reservation_date, 
@@ -534,9 +518,8 @@ SELECT
 FROM Reservations r
 JOIN Clients c ON r.id_client = c.id_client;
 
--- Przyk³adowe zapytanie analityczne
--- Wyœwietlenie liczby rezerwacji wykonanych przez ka¿dego pracownika w danym miesi¹cu
--- Widok pokazuj¹cy liczbê rezerwacji w ka¿dym pokoju w hotelu
+
+-- widok liczby rezerwacji w ka¿dym pokoju w hotelu
 go
 CREATE VIEW RoomReservationSummary AS
 SELECT 
@@ -549,14 +532,14 @@ LEFT JOIN Reservations res ON r.id_room = res.id_room
 GROUP BY h.hotel_name, r.id_room;
 go
 
--- Zapytanie wykorzystuj¹ce widok do wyœwietlenia liczby rezerwacji w hotelach
+-- zapytanie wykorzystuj¹ce widok do wyœwietlenia liczby rezerwacji w hotelach
 SELECT * 
 FROM RoomReservationSummary
 WHERE total_reservations > 0
 ORDER BY total_reservations DESC;
 
 
---Liczba uczestników ka¿dego wydarzenia:
+--liczba uczestników ka¿dego wydarzenia:
 SELECT e.event_name, COUNT(er.id_registration) AS total_participants
 FROM Events e
 LEFT JOIN EventRegistration er ON e.id_event = er.id_event
