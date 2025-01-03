@@ -1,5 +1,7 @@
 -- Step 1: Database Creation and Setup
-USE tempdb;
+CREATE DATABASE HOTELDB;
+ALTER DATABASE HOTELDB COLLATE Polish_CS_AS;
+USE HOTELDB;
 GO
 
 -- Step 2: Table Definitions with Normalization and Constraints
@@ -40,16 +42,17 @@ CREATE TABLE [Clients] (
 );
 
 CREATE TABLE [Reservations] (
-	[id_reservation] INT IDENTITY(1,1) PRIMARY KEY,
-	[id_client] INT NOT NULL,
-	[id_room] INT NOT NULL,
-	[reservation_date] DATE NOT NULL,
-	[arrival_date] DATE NOT NULL,
-	[departure_date] DATE NOT NULL CHECK ([departure_date] > [arrival_date]),
-	[payment_status] NVARCHAR(50) NOT NULL CHECK ([payment_status] IN ('Paid', 'Pending', 'Cancelled')),
-	[special_requests] NVARCHAR(200),
-	FOREIGN KEY ([id_client]) REFERENCES [Clients]([id_client]),
-	FOREIGN KEY ([id_room]) REFERENCES [Rooms]([id_room])
+    [id_reservation] INT IDENTITY(1,1) PRIMARY KEY,
+    [id_client] INT NOT NULL,
+    [id_room] INT NOT NULL,
+    [reservation_date] DATE NOT NULL,
+    [arrival_date] DATE NOT NULL,
+    [departure_date] DATE NOT NULL,
+    [payment_status] NVARCHAR(50) NOT NULL CHECK ([payment_status] IN ('Paid', 'Pending', 'Cancelled')),
+    [special_requests] NVARCHAR(200),
+    FOREIGN KEY ([id_client]) REFERENCES [Clients]([id_client]),
+    FOREIGN KEY ([id_room]) REFERENCES [Rooms]([id_room]),
+    CONSTRAINT chk_departure_date CHECK ([departure_date] > [arrival_date]) -- Przeniesiono ograniczenie CHECK na poziom tabeli
 );
 
 CREATE TABLE [Facilities] (
@@ -85,8 +88,10 @@ CREATE TABLE [EventRegistration] (
 	FOREIGN KEY ([id_event]) REFERENCES [Events]([id_event]),
 	FOREIGN KEY ([id_client]) REFERENCES [Clients]([id_client])
 );
+go;
 
 -- Step 3: Triggers for ModifiedDate Updates
+
 CREATE TRIGGER trg_UpdateModifiedDate ON [Hotels]
 AFTER UPDATE AS
 BEGIN
@@ -94,6 +99,80 @@ BEGIN
 	SET [ModifiedDate] = GETDATE()
 	WHERE [id_hotel] IN (SELECT DISTINCT [id_hotel] FROM Inserted);
 END;
+GO;
+
+CREATE TRIGGER trg_UpdateTotalRooms ON [Rooms]
+AFTER INSERT, DELETE
+AS
+BEGIN
+    -- Aktualizacja po dodaniu pokoju
+    IF EXISTS (SELECT * FROM Inserted)
+    BEGIN
+        UPDATE h
+        SET [total_rooms] = (
+            SELECT COUNT(*)
+            FROM [Rooms]
+            WHERE [id_hotel] = i.[id_hotel]
+        )
+        FROM [Hotels] h
+        JOIN Inserted i ON h.[id_hotel] = i.[id_hotel];
+    END
+
+    -- Aktualizacja po usuniêciu pokoju
+    IF EXISTS (SELECT * FROM Deleted)
+    BEGIN
+        UPDATE h
+        SET [total_rooms] = (
+            SELECT COUNT(*)
+            FROM [Rooms]
+            WHERE [id_hotel] = d.[id_hotel]
+        )
+        FROM [Hotels] h
+        JOIN Deleted d ON h.[id_hotel] = d.[id_hotel];
+    END
+END;
+GO
+
+CREATE TRIGGER trg_CheckRoomAvailability ON [Reservations]
+INSTEAD OF INSERT
+AS
+BEGIN
+    -- SprawdŸ, czy istnieje nak³adaj¹ca siê rezerwacja, która nie jest anulowana
+    IF EXISTS (
+        SELECT 1
+        FROM [Reservations] r
+        JOIN Inserted i ON r.[id_room] = i.[id_room]
+        WHERE i.[arrival_date] < r.[departure_date]
+          AND i.[departure_date] > r.[arrival_date]
+          AND r.[payment_status] != 'Cancelled'
+    )
+    BEGIN
+        -- Jeœli nak³adaj¹ca siê rezerwacja istnieje, zg³oœ b³¹d
+        RAISERROR('Pokój jest ju¿ zarezerwowany w podanym terminie.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+    ELSE
+    BEGIN
+        -- Jeœli nie ma konfliktu, wstaw dane
+        INSERT INTO [Reservations] ([id_client], [id_room], [reservation_date], [arrival_date], [departure_date], [payment_status], [special_requests])
+        SELECT [id_client], [id_room], [reservation_date], [arrival_date], [departure_date], [payment_status], [special_requests]
+        FROM Inserted;
+    END
+END;
+GO
+
+
+CREATE TRIGGER trg_UpdatePaymentStatus ON [Payments]
+AFTER INSERT
+AS
+BEGIN
+    UPDATE [Reservations]
+    SET [payment_status] = 'Paid'
+    WHERE [id_reservation] IN (SELECT [id_reservation] FROM Inserted);
+END;
+GO
+
+
 
 -- Step 4: Indexing
 CREATE NONCLUSTERED INDEX idx_fk_id_hotel ON [Rooms] ([id_hotel]);
@@ -102,6 +181,7 @@ CREATE NONCLUSTERED INDEX idx_fk_id_room ON [Facilities] ([id_room]);
 CREATE NONCLUSTERED INDEX idx_fk_id_reservation ON [Payments] ([id_reservation]);
 
 -- Step 5: Stored Procedures for Data Manipulation
+go;
 CREATE PROCEDURE sp_InsertHotel
 	@hotel_name NVARCHAR(100),
 	@country NVARCHAR(100),
@@ -119,14 +199,84 @@ BEGIN
 		THROW;
 	END CATCH
 END;
+go;
+CREATE PROCEDURE sp_InsertClient
+    @name NVARCHAR(50),
+    @last_name NVARCHAR(50),
+    @contact_number NVARCHAR(15),
+    @email NVARCHAR(100),
+    @document_number NVARCHAR(50),
+    @address NVARCHAR(200),
+    @country NVARCHAR(100),
+    @date_of_birth DATE,
+    @gender NVARCHAR(10)
+AS
+BEGIN
+    BEGIN TRY
+        INSERT INTO [Clients] ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
+        VALUES (@name, @last_name, @contact_number, @email, @document_number, @address, @country, @date_of_birth, @gender);
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH
+END;
+GO
 
--- Step 6: User Roles and Permissions
-CREATE LOGIN HotelManager WITH PASSWORD = 'SecurePass123!';
-CREATE USER HotelManagerUser FOR LOGIN HotelManager;
-ALTER ROLE db_datareader ADD MEMBER HotelManagerUser;
-ALTER ROLE db_datawriter ADD MEMBER HotelManagerUser;
+-- Procedure for Rooms Table
+CREATE PROCEDURE sp_InsertRoom
+    @id_hotel INT,
+    @price_per_night DECIMAL(18,2),
+    @floor INT,
+    @number_of_beds INT,
+    @room_size DECIMAL(18,2),
+    @description NVARCHAR(200)
+AS
+BEGIN
+    BEGIN TRY
+        INSERT INTO [Rooms] ([id_hotel], [price_per_night], [floor], [number_of_beds], [room_size], [description])
+        VALUES (@id_hotel, @price_per_night, @floor, @number_of_beds, @room_size, @description);
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH
+END;
+GO
 
--- Step 7: Backup
-BACKUP DATABASE tempdb TO DISK = 'C:\Backup\HotelDB_Full.bak' WITH FORMAT;
+-- Procedure for Reservations Table
+CREATE PROCEDURE sp_InsertReservation
+    @id_client INT,
+    @id_room INT,
+    @reservation_date DATE,
+    @arrival_date DATE,
+    @departure_date DATE,
+    @payment_status NVARCHAR(50),
+    @special_requests NVARCHAR(200)
+AS
+BEGIN
+    BEGIN TRY
+        INSERT INTO [Reservations] ([id_client], [id_room], [reservation_date], [arrival_date], [departure_date], [payment_status], [special_requests])
+        VALUES (@id_client, @id_room, @reservation_date, @arrival_date, @departure_date, @payment_status, @special_requests);
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH
+END;
+GO
 
--- Additional steps: Sample queries, analytics, and Power BI integration can be added later.
+-- Procedure for Payments Table
+CREATE PROCEDURE sp_InsertPayment
+    @id_reservation INT,
+    @amount DECIMAL(18,2),
+    @payment_date DATE,
+    @payment_method NVARCHAR(50)
+AS
+BEGIN
+    BEGIN TRY
+        INSERT INTO [Payments] ([id_reservation], [amount], [payment_date], [payment_method])
+        VALUES (@id_reservation, @amount, @payment_date, @payment_method);
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH
+END;
+GO

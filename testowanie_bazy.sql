@@ -1,134 +1,206 @@
--- Wstawianie danych do tabeli Hotels (z przykładowym błędem dla duplikatu)
-INSERT INTO [Hotels] 
-([hotel_name], [country], [address], [total_rooms], [manager_name], [contact_number])
-VALUES 
-('Hotel Paradise', 'USA', '101 Sunset Blvd', 50, 'Alice Green', '123456789'),
-('Grand Royal', 'UK', '102 High Street', 80, 'John Brown', '987654321'),
-('Empty Hotel', 'France', '104 Rivoli', 1, 'Sophia White', '789123456'),
-('Hotel Atlantis', 'Germany', '105 Oceanview', 120, 'Emma Brown', '123456780');
+-- ## Wstawianie danych do tabeli Hotels ##
 
--- Błąd: duplikat nazwy hotelu
-INSERT INTO [Hotels] 
-([hotel_name], [country], [address], [total_rooms], [manager_name], [contact_number])
-VALUES 
-('Hotel Paradise', 'Canada', '103 Maple Ave', 60, 'David Smith', '456789123');
+-- Poprawne
+BEGIN TRY
+    EXEC sp_InsertHotel N'Hotel Paradise', N'USA', N'101 Sunset Blvd', 50, N'Alice Green', N'123456789';
+    EXEC sp_InsertHotel N'Grand Royal', N'UK', N'102 High Street', 80, N'John Brown', N'987654321';
+    EXEC sp_InsertHotel N'Empty Hotel', N'France', N'104 Rivoli', 1, N'Sophia White', N'789123456';
+    EXEC sp_InsertHotel N'Hotel Atlantis', N'Germany', N'105 Oceanview', 120, N'Emma Brown', N'123456780';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd wstawiania do tabeli Hotels';
+    THROW;
+END CATCH;
 
--- Wstawianie danych do tabeli Rooms (z przykładowymi błędami)
-INSERT INTO [Rooms] 
-([id_hotel], [price_per_night], [floor], [number_of_beds], [room_size], [description])
-VALUES 
-(1, 150.00, 2, 2, 30.00, 'Deluxe room with balcony'),
-(1, 180.00, 3, 1, 20.00, 'Single room with city view'),
-(2, 300.00, 5, 3, 55.00, 'Family suite with kitchenette');
+-- Błędne (duplikat nazwy hotelu)
+BEGIN TRY
+    EXEC sp_InsertHotel N'Hotel Paradise', N'Canada', N'103 Maple Ave', 60, N'David Smith', N'456789123';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: duplikat nazwy hotelu!';
+    THROW;
+END CATCH;
 
--- Błąd: negatywna cena
-INSERT INTO [Rooms] 
-([id_hotel], [price_per_night], [floor], [number_of_beds], [room_size], [description])
-VALUES 
-(1, -50.00, 1, 1, 20.00, 'Single room');
+-- ## Wstawianie danych do tabeli Rooms ##
 
--- Błąd: liczba łóżek poniżej 1
-INSERT INTO [Rooms] 
-([id_hotel], [price_per_night], [floor], [number_of_beds], [room_size], [description])
-VALUES 
-(1, 120.00, 3, 0, 25.00, 'Small room');
+-- Poprawne
+BEGIN TRY
+    EXEC sp_InsertRoom 1, 150.00, 2, 2, 30.00, N'Deluxe room with balcony';
+    EXEC sp_InsertRoom 1, 180.00, 3, 1, 20.00, N'Single room with city view';
+    EXEC sp_InsertRoom 2, 300.00, 5, 3, 55.00, N'Family suite with kitchenette';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd wstawiania do tabeli Rooms';
+    THROW;
+END CATCH;
 
--- Wstawianie danych do tabeli Clients
-INSERT INTO [Clients] 
-([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
-VALUES 
-('John', 'Doe', '123456789', 'john.doe@example.com', 'ID12345', '123 Main St', 'USA', '2000-01-01', 'Male'),
-('Sophia', 'Davis', '234567891', 'sophia.davis@example.com', 'ID54321', '234 Elm St', 'USA', '1990-03-15', 'Female');
+-- Błędne (negatywna cena)
+BEGIN TRY
+    EXEC sp_InsertRoom 1, -50.00, 1, 1, 20.00, N'Single room';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: negatywna cena!';
+    THROW;
+END CATCH;
 
--- Błąd: niepełnoletni klient
-INSERT INTO [Clients] 
-([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
-VALUES 
-('Jane', 'Smith', '987654321', 'jane.smith@example.com', 'ID54321', '456 Another St', 'Canada', '2010-05-15', 'Female');
+-- Błędne (liczba łóżek poniżej 1)
+BEGIN TRY
+    EXEC sp_InsertRoom 1, 120.00, 3, 0, 25.00, N'Small room';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: liczba łóżek musi być większa od 0!';
+    THROW;
+END CATCH;
 
--- Błąd: nieprawidłowy adres e-mail
-INSERT INTO [Clients] 
-([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
-VALUES 
-('Invalid', 'Email', '123456789', 'invalid-email', 'ID99999', '123 Fake St', 'USA', '1990-01-01', 'Male');
+-- ## Wstawianie danych do tabeli Clients ##
 
--- Wstawianie danych do tabeli Reservations (z przykładowymi błędami)
-INSERT INTO [Reservations] 
-([id_client], [id_room], [reservation_date], [arrival_date], [departure_date], [payment_status], [special_requests])
-VALUES 
-(1, 1, GETDATE(), '2024-12-25', '2024-12-30', 'Pending', 'No special requirements'),
-(2, 2, GETDATE(), '2024-12-15', '2024-12-20', 'Confirmed', 'Late arrival');
+-- Poprawne
+BEGIN TRY
+    EXEC sp_InsertClient N'John', N'Doe', N'123456789', N'john.doe@example.com', N'ID12345', N'123 Main St', N'USA', '2000-01-01', N'Male';
+    EXEC sp_InsertClient N'Sophia', N'Davis', N'234567891', N'sophia.davis@example.com', N'ID54321', N'234 Elm St', N'USA', '1990-03-15', N'Female';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd wstawiania do tabeli Clients';
+    THROW;
+END CATCH;
 
--- Błąd: data przyjazdu po dacie wyjazdu
-INSERT INTO [Reservations] 
-([id_client], [id_room], [reservation_date], [arrival_date], [departure_date], [payment_status], [special_requests])
-VALUES 
-(1, 1, GETDATE(), '2024-12-30', '2024-12-25', 'Pending', 'Late check-in');
+-- Błędne (niepełnoletni klient)
+BEGIN TRY
+    EXEC sp_InsertClient N'Jane', N'Smith', N'987654321', N'jane.smith@example.com', N'ID54321', N'456 Another St', N'Canada', '2010-05-15', N'Female';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: klient musi być pełnoletni!';
+    THROW;
+END CATCH;
 
--- Błąd: pokój już zarezerwowany
-INSERT INTO [Reservations] 
-([id_client], [id_room], [reservation_date], [arrival_date], [departure_date], [payment_status], [special_requests])
-VALUES 
-(2, 1, GETDATE(), '2024-12-27', '2024-12-28', 'Pending', 'Early check-in');
+-- Błędne (nieprawidłowy adres e-mail)
+BEGIN TRY
+    EXEC sp_InsertClient N'Invalid', N'Email', N'123456789', N'invalid-email', N'ID99999', N'123 Fake St', N'USA', '1990-01-01', N'Male';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: nieprawidłowy adres e-mail!';
+    THROW;
+END CATCH;
 
--- Przykładowe zapytania walidacyjne i testowe
-SELECT * FROM [Clients] WHERE DATEDIFF(YEAR, [date_of_birth], GETDATE()) < 18;
-SELECT * FROM [Rooms] WHERE [price_per_night] <= 0;
-SELECT * FROM [Reservations] WHERE [arrival_date] >= [departure_date];
+-- ## Wstawianie danych do tabeli Reservations ##
 
--- Wstawianie danych do tabeli Payments
-INSERT INTO [Payments]
-([id_reservation], [amount], [payment_date], [payment_method])
-VALUES
-(1, 900.00, GETDATE(), 'Credit Card'),
-(2, 1800.00, GETDATE(), 'Bank Transfer'),
-(3, 2100.00, GETDATE(), 'Cash');
+-- Poprawne
+BEGIN TRY
+    EXEC sp_InsertReservation 1, 1, GETDATE(), '2024-12-25', '2024-12-30', N'Pending', N'No special requirements';
+    EXEC sp_InsertReservation 2, 2, GETDATE(), '2024-12-15', '2024-12-20', N'Pending', N'Late arrival';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd wstawiania do tabeli Reservations';
+    THROW;
+END CATCH;
 
--- Błąd: brak kwoty
-INSERT INTO [Payments]
-([id_reservation], [amount], [payment_date], [payment_method])
-VALUES
-(1, NULL, GETDATE(), 'Credit Card'); -- Powinno zakończyć się błędem
+-- Błędne (data przyjazdu po dacie wyjazdu)
+BEGIN TRY
+    EXEC sp_InsertReservation 1, 1, GETDATE(), '2024-12-30', '2024-12-25', N'Pending', N'Late check-in';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: data przyjazdu późniejsza niż data wyjazdu!';
+    THROW;
+END CATCH;
 
--- Błąd: brak metody płatności
-INSERT INTO [Payments]
-([id_reservation], [amount], [payment_date], [payment_method])
-VALUES
-(1, 500.00, GETDATE(), NULL); -- Powinno zakończyć się błędem
+-- Błędne (pokój już zarezerwowany)
+BEGIN TRY
+    EXEC sp_InsertReservation 2, 1, GETDATE(), '2024-12-27', '2024-12-28', N'Pending', N'Early check-in';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: pokój już zarezerwowany w tym okresie!';
+    THROW;
+END CATCH;
 
--- Wstawianie danych do tabeli Events
-INSERT INTO [Events]
-([event_name], [event_date], [location], [description])
-VALUES
-('Christmas Gala', '2024-12-24', 'Main Ballroom', 'A grand Christmas celebration'),
-('Corporate Retreat', '2024-12-15', 'Conference Room', 'A retreat for corporate teams'),
-('New Year Party', '2024-12-31', 'Rooftop Terrace', 'Celebrate the New Year with us!');
+-- ## Wstawianie danych do tabeli Payments ##
 
--- Błąd: data wydarzenia w przeszłości
-INSERT INTO [Events]
-([event_name], [event_date], [location], [description])
-VALUES
-('Past Event', '2020-01-01', 'Old Hall', 'This event is in the past'); -- Powinno zakończyć się błędem
+-- Poprawne
+BEGIN TRY
+    EXEC sp_InsertPayment 1, 900.00, GETDATE(), N'Credit Card';
+    EXEC sp_InsertPayment 2, 1800.00, GETDATE(), N'Bank Transfer';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd wstawiania do tabeli Payments';
+    THROW;
+END CATCH;
 
--- Wstawianie danych do tabeli EventRegistration
-INSERT INTO [EventRegistration]
-([id_event], [id_client], [registration_date])
-VALUES
-(1, 1, GETDATE()),
-(2, 2, GETDATE());
+-- Błędne (brak kwoty płatności)
+BEGIN TRY
+    EXEC sp_InsertPayment 1, NULL, GETDATE(), N'Credit Card';
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: brak kwoty płatności!';
+    THROW;
+END CATCH;
 
--- Błąd: brak klienta
-INSERT INTO [EventRegistration]
-([id_event], [id_client], [registration_date])
-VALUES
-(3, NULL, GETDATE()); -- Powinno zakończyć się błędem
+-- Błędne (brak metody płatności)
+BEGIN TRY
+    EXEC sp_InsertPayment 1, 500.00, GETDATE(), NULL;
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: brak metody płatności!';
+    THROW;
+END CATCH;
 
--- Błąd: brak wydarzenia
-INSERT INTO [EventRegistration]
-([id_event], [id_client], [registration_date])
-VALUES
-(NULL, 1, GETDATE()); -- Powinno zakończyć się błędem
+-- ## Wstawianie danych do tabeli Events ##
 
+-- Poprawne
+BEGIN TRY
+    INSERT INTO [Events] ([event_name], [event_date], [location], [description])
+    VALUES
+    (N'Christmas Gala', '2024-12-24', N'Main Ballroom', N'A grand Christmas celebration'),
+    (N'Corporate Retreat', '2024-12-15', N'Conference Room', N'A retreat for corporate teams'),
+    (N'New Year Party', '2024-12-31', N'Rooftop Terrace', N'Celebrate the New Year with us!');
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd wstawiania do tabeli Events';
+    THROW;
+END CATCH;
+
+-- Błędne (data wydarzenia w przeszłości)
+BEGIN TRY
+    INSERT INTO [Events] ([event_name], [event_date], [location], [description])
+    VALUES
+    (N'Past Event', '2020-01-01', N'Old Hall', N'This event is in the past');
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: wydarzenie w przeszłości!';
+    THROW;
+END CATCH;
+
+-- ## Wstawianie danych do tabeli EventRegistration ##
+
+-- Poprawne
+BEGIN TRY
+    INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
+    VALUES
+    (1, 1, GETDATE()),
+    (2, 2, GETDATE());
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd wstawiania do tabeli EventRegistration';
+    THROW;
+END CATCH;
+
+-- Błędne (brak klienta)
+BEGIN TRY
+    INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
+    VALUES (3, NULL, GETDATE());
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: brak klienta!';
+    THROW;
+END CATCH;
+
+-- Błędne (brak wydarzenia)
+BEGIN TRY
+    INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
+    VALUES (NULL, 1, GETDATE());
+END TRY
+BEGIN CATCH
+    PRINT 'Błąd: brak wydarzenia!';
+    THROW;
+END CATCH;
 
 -- #6 Testowanie widoku AvailableRooms
 -- Sprawdzenie dostępnych pokoi - powinno zwrócić pokoje, które nie są zarezerwowane w danym okresie
@@ -211,3 +283,24 @@ LEFT JOIN [Events] e
   ON h.[id_hotel] = e.[id_event]
 GROUP BY h.[hotel_name]
 ORDER BY [NumberOfEvents] DESC;
+
+-- Przykładowe zapytanie do odczytania rezerwacji
+SELECT r.id_reservation, r.reservation_date, e.name AS employee_name, c.name AS client_name, r.purpose
+FROM Reservations r
+JOIN Employees e ON r.employee_id = e.id_employee
+JOIN Clients c ON r.client_id = c.id_client;
+
+-- Przykładowe zapytanie analityczne
+-- Wyświetlenie liczby rezerwacji wykonanych przez każdego pracownika w danym miesiącu
+CREATE VIEW EmployeeReservationSummary AS
+SELECT 
+    e.id_employee, 
+    e.name AS employee_name, 
+    MONTH(r.reservation_date) AS reservation_month, 
+    COUNT(*) AS total_reservations
+FROM Reservations r
+JOIN Employees e ON r.employee_id = e.id_employee
+GROUP BY e.id_employee, e.name, MONTH(r.reservation_date);
+
+-- Zapytanie wykorzystujące widok
+SELECT * FROM EmployeeReservationSummary WHERE reservation_month = 1;
