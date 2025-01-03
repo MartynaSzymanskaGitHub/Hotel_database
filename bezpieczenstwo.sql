@@ -1,5 +1,5 @@
 -- Ustawienie modelu odzyskiwania danych na FULL
-ALTER DATABASE tempdb SET RECOVERY FULL;
+ALTER DATABASE HOTELDB SET RECOVERY FULL;
 GO
 
 -- Tworzenie loginów dla grup użytkowników
@@ -9,8 +9,6 @@ CREATE LOGIN GuestLogin WITH PASSWORD = 'Guest123!';
 GO
 
 -- Tworzenie użytkowników w bazie danych dla loginów
-USE tempdb;
-GO
 CREATE USER HotelManagerUser FOR LOGIN HotelManagerLogin;
 CREATE USER ReceptionistUser FOR LOGIN ReceptionistLogin;
 CREATE USER GuestUser FOR LOGIN GuestLogin;
@@ -42,15 +40,15 @@ GRANT SELECT ON [Rooms] TO GuestRole;
 GO
 
 -- Backup bazy danych
-BACKUP DATABASE tempdb 
-TO DISK = 'C:\\Backup\\tempdb_FULL.bak' 
-WITH FORMAT, INIT, NAME = 'Full Backup of tempdb';
+BACKUP DATABASE hoteldb 
+TO DISK = 'C:\studia\backup.bak' 
+WITH FORMAT, INIT, NAME = 'Full Backup of HOTELDB 245938 245958';
 GO
 
 -- Skrypt do przywracania bazy danych
 -- Używając loginu sa
 RESTORE DATABASE tempdb 
-FROM DISK = 'C:\\Backup\\tempdb_FULL.bak' 
+FROM DISK = 'C:\studia\backup.bak' 
 WITH RECOVERY, REPLACE;
 GO
 
@@ -60,7 +58,7 @@ EXECUTE AS USER = 'HotelManagerUser';
 -- Test: Pełny dostęp
 SELECT * FROM [Clients]; -- Powinno zadziałać
 INSERT INTO [Clients] ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
-VALUES ('Test', 'Manager', '123456789', 'manager@test.com', 'ID99999', '123 Manager St', 'USA', '1990-01-01', 'Male'); -- Powinno zadziałać
+VALUES ('Test', 'Manager', '987654322', 'manager@test.com', 'ID99999', '123 Manager St', 'USA', '1990-01-01', 'Male'); -- Powinno zadziałać
 REVERT;
 
 -- Logowanie jako ReceptionistUser
