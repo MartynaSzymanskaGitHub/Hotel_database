@@ -300,7 +300,7 @@ GO
 BEGIN TRY
     EXEC sp_InsertHotel N'Hotel Paradise', N'PL', N'Radwanska 102', 50, N'Kamil Winczewski', N'123456789';
     EXEC sp_InsertHotel N'Grand Royal', N'UK', N'London street 2', 80, N'Martyna Szymanska', N'987654321';
-    EXEC sp_InsertHotel N'Empty Hotel', N'France', N'104 Ravioli', 1, N'Maria Curie', N'789123456';
+    EXEC sp_InsertHotel N'Empty Hotel', N'France', N'Ravioli 104', 1, N'Maria Curie', N'789123456';
     EXEC sp_InsertHotel N'Hotel Berlin', N'Germany', N'Heise strase 2', 120, N'John French', N'123456780';
 END TRY
 BEGIN CATCH
@@ -321,7 +321,7 @@ END CATCH;
 BEGIN TRY
     EXEC sp_InsertRoom 1, 150.00, 2, 2, 30.00, N'Deluxe room with balcony';
     EXEC sp_InsertRoom 1, 180.00, 3, 1, 20.00, N'Single room with city view';
-    EXEC sp_InsertRoom 2, 300.00, 5, 3, 55.00, N'Family suite with kitchenette';
+    EXEC sp_InsertRoom 2, 300.00, 5, 3, 55.00, N'Family suite with kitchen';
 END TRY
 BEGIN CATCH
     PRINT 'Error inserting data to Rooms';
@@ -348,8 +348,8 @@ END CATCH;
 
 -- poprawne
 BEGIN TRY
-    EXEC sp_InsertClient N'John', N'Doe', N'123456789', N'john.doe@example.com', N'ID12345', N'123 Main St', N'USA', '2000-01-01', N'Male';
-    EXEC sp_InsertClient N'Sophia', N'Davis', N'234567891', N'sophia.davis@example.com', N'ID54321', N'234 Elm St', N'USA', '1990-03-15', N'Female';
+    EXEC sp_InsertClient N'Marek', N'Cebula', N'123456789', N'm.cebula@example.com', N'ID12345', N'Nowa 15', N'Poland', '2000-01-01', N'Male';
+    EXEC sp_InsertClient N'Zosia', N'Burek', N'234567891', N'zosia.bulp@example.com', N'ID54321', N'Stara 1', N'Poland', '1990-03-15', N'Female';
 END TRY
 BEGIN CATCH
     PRINT 'Error inserting data to Clients';
@@ -358,7 +358,7 @@ END CATCH;
 
 -- (niepe�noletni klient) - b��d
 BEGIN TRY
-    EXEC sp_InsertClient N'Jane', N'Smith', N'987654321', N'jane.smith@example.com', N'ID54321', N'456 Another St', N'Canada', '2010-05-15', N'Female';
+    EXEC sp_InsertClient N'Jacek', N'Piastowski', N'987654321', N'j.piast@example.com', N'ID54321', N'Piotrkowska 12', N'Poland', '2010-05-15', N'Male';
 END TRY
 BEGIN CATCH
     PRINT 'Error: Client underage!';
@@ -367,7 +367,7 @@ END CATCH;
 
 -- (nieprawid�owy adres e-mail) - b��d
 BEGIN TRY
-    EXEC sp_InsertClient N'Invalid', N'Email', N'123456789', N'invalid-email', N'ID99999', N'123 Fake St', N'USA', '1990-01-01', N'Male';
+    EXEC sp_InsertClient N'Invalid', N'Email', N'123456789', N'invalid-email', N'ID99999', N'123 blad', N'USA', '1990-01-01', N'Male';
 END TRY
 BEGIN CATCH
     PRINT 'Error: invalid address e-mail format!';
@@ -377,7 +377,7 @@ END CATCH;
 
 -- (nieprawidlowa p�e�) - b��d
 BEGIN TRY
-    EXEC sp_InsertClient N'Jane', N'Malik', N'987654300', N'jane.smith@example.com', N'ID54321', N'456 Another St', N'Canada', '2000-05-15', N'Unknown';
+    EXEC sp_InsertClient N'Hanna', N'Malik', N'987654300', N'h.malik@example.com', N'ID54321', N'456 Another St', N'Canada', '2000-05-15', N'Unknown';
 END TRY
 BEGIN CATCH
     PRINT 'Error: Invalid data! Different from : Male, Female, Other!';
@@ -452,9 +452,9 @@ END CATCH;
 BEGIN TRY
     INSERT INTO [Events] ([event_name], [event_date], [location], [description])
     VALUES
-    (N'Christmas Gala', '2024-12-24', N'Main Ballroom', N'A grand Christmas celebration'),
-    (N'Corporate Retreat', '2024-12-15', N'Conference Room', N'A retreat for corporate teams'),
-    (N'New Year Party', '2024-12-31', N'Rooftop Terrace', N'Celebrate the New Year with us!');
+    (N'Christmas Gala', '2024-12-24', N'Main Ballroom', N'Christmas celebration'),
+    (N'Corporate Retreat', '2024-12-15', N'Conference Room', N'Spotkanie przy herbacie'),
+    (N'New Year Party', '2024-12-31', N'Rooftop Terrace', N'Impreza nowego roku!');
 END TRY
 BEGIN CATCH
     PRINT 'Error: inserting data to Events';
