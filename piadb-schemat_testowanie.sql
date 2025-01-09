@@ -472,7 +472,7 @@ END CATCH;
 
 -- poprawne
 BEGIN TRY
-    INSERT INTO [Events] ([event_name], [event_date], [location], [description])
+    INSERT INTO [Events] ([event_name], [event_date], [location], [description],[id_hotel])
     VALUES
     (N'Christmas Gala', '2024-12-24', N'Main Ballroom', N'Christmas celebration', 1),
     (N'Corporate Retreat', '2024-12-15', N'Conference Room', N'Spotkanie przy herbacie', 2),
