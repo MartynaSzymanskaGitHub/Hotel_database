@@ -84,7 +84,9 @@ CREATE TABLE [Events] (
     [event_name] NVARCHAR(100) NOT NULL,
     [event_date] DATE NOT NULL,
     [location] NVARCHAR(200) NOT NULL,
-    [description] NVARCHAR(200)
+    [description] NVARCHAR(200),
+    [id_hotel] INT NOT NULL,
+    FOREIGN KEY ([id_hotel]) REFERENCES [Hotels]([id_hotel])
 );
 GO
 
@@ -103,6 +105,7 @@ CREATE NONCLUSTERED INDEX idx_fk_id_hotel ON [Rooms] ([id_hotel]);
 CREATE NONCLUSTERED INDEX idx_fk_id_client ON [Reservations] ([id_client]);
 CREATE NONCLUSTERED INDEX idx_fk_id_room ON [Facilities] ([id_room]);
 CREATE NONCLUSTERED INDEX idx_fk_id_reservation ON [Payments] ([id_reservation]);
+CREATE NONCLUSTERED INDEX idx_fk_id_hotel_events ON [Events] ([id_hotel]);
 GO
 
 -- 4. Tworzenie trigger�w
@@ -294,6 +297,25 @@ BEGIN
 END;
 GO
 
+CREATE PROCEDURE sp_InsertEvent
+    @event_name NVARCHAR(100),
+    @event_date DATE,
+    @location NVARCHAR(200),
+    @description NVARCHAR(200),
+    @id_hotel INT
+AS
+BEGIN
+    BEGIN TRY
+        INSERT INTO [Events] ([event_name], [event_date], [location], [description], [id_hotel])
+        VALUES (@event_name, @event_date, @location, @description, @id_hotel);
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
+END;
+GO
+
+
 -- 6. Wstawianie przyk�adowych danych
 
 -- poprawne
@@ -452,9 +474,9 @@ END CATCH;
 BEGIN TRY
     INSERT INTO [Events] ([event_name], [event_date], [location], [description])
     VALUES
-    (N'Christmas Gala', '2024-12-24', N'Main Ballroom', N'Christmas celebration'),
-    (N'Corporate Retreat', '2024-12-15', N'Conference Room', N'Spotkanie przy herbacie'),
-    (N'New Year Party', '2024-12-31', N'Rooftop Terrace', N'Impreza nowego roku!');
+    (N'Christmas Gala', '2024-12-24', N'Main Ballroom', N'Christmas celebration', 1),
+    (N'Corporate Retreat', '2024-12-15', N'Conference Room', N'Spotkanie przy herbacie', 2),
+    (N'New Year Party', '2024-12-31', N'Rooftop Terrace', N'Impreza nowego roku!', 1);
 END TRY
 BEGIN CATCH
     PRINT 'Error: inserting data to Events';
