@@ -105,7 +105,7 @@ CREATE NONCLUSTERED INDEX idx_fk_id_room ON [Facilities] ([id_room]);
 CREATE NONCLUSTERED INDEX idx_fk_id_reservation ON [Payments] ([id_reservation]);
 GO
 
--- 4. Tworzenie triggerów
+-- 4. Tworzenie triggerï¿½w
 CREATE TRIGGER trg_UpdateModifiedDate ON [Hotels]
 AFTER UPDATE
 AS
@@ -294,21 +294,21 @@ BEGIN
 END;
 GO
 
--- 6. Wstawianie przyk³adowych danych
+-- 6. Wstawianie przykï¿½adowych danych
 
 -- poprawne
 BEGIN TRY
-    EXEC sp_InsertHotel N'Hotel Paradise', N'USA', N'101 Sunset Blvd', 50, N'Alice Green', N'123456789';
-    EXEC sp_InsertHotel N'Grand Royal', N'UK', N'102 High Street', 80, N'John Brown', N'987654321';
-    EXEC sp_InsertHotel N'Empty Hotel', N'France', N'104 Rivoli', 1, N'Sophia White', N'789123456';
-    EXEC sp_InsertHotel N'Hotel Atlantis', N'Germany', N'105 Oceanview', 120, N'Emma Brown', N'123456780';
+    EXEC sp_InsertHotel N'Hotel Paradise', N'PL', N'Radwanska 102', 50, N'Kamil Winczewski', N'123456789';
+    EXEC sp_InsertHotel N'Grand Royal', N'UK', N'London street 2', 80, N'Martyna Szymanska', N'987654321';
+    EXEC sp_InsertHotel N'Empty Hotel', N'France', N'104 Ravioli', 1, N'Maria Curie', N'789123456';
+    EXEC sp_InsertHotel N'Hotel Berlin', N'Germany', N'Heise strase 2', 120, N'John French', N'123456780';
 END TRY
 BEGIN CATCH
     PRINT 'Error inserting data to Hotel';
     THROW;
 END CATCH;
 
--- (duplikat nazwy hotelu) - b³¹d
+-- (duplikat nazwy hotelu) - bï¿½ï¿½d
 BEGIN TRY
     EXEC sp_InsertHotel N'Hotel Paradise', N'Canada', N'103 Maple Ave', 60, N'David Smith', N'456789123';
 END TRY
@@ -328,7 +328,7 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
--- (negatywna cena) - b³¹d
+-- (negatywna cena) - bï¿½ï¿½d
 BEGIN TRY
     EXEC sp_InsertRoom 1, -50.00, 1, 1, 20.00, N'Single room';
 END TRY
@@ -337,7 +337,7 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
--- (liczba ³ó¿ek poni¿ej 1) -  b³¹d
+-- (liczba ï¿½ï¿½ek poniï¿½ej 1) -  bï¿½ï¿½d
 BEGIN TRY
     EXEC sp_InsertRoom 1, 120.00, 3, 0, 25.00, N'Small room';
 END TRY
@@ -356,7 +356,7 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
--- (niepe³noletni klient) - b³¹d
+-- (niepeï¿½noletni klient) - bï¿½ï¿½d
 BEGIN TRY
     EXEC sp_InsertClient N'Jane', N'Smith', N'987654321', N'jane.smith@example.com', N'ID54321', N'456 Another St', N'Canada', '2010-05-15', N'Female';
 END TRY
@@ -365,7 +365,7 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
--- (nieprawid³owy adres e-mail) - b³¹d
+-- (nieprawidï¿½owy adres e-mail) - bï¿½ï¿½d
 BEGIN TRY
     EXEC sp_InsertClient N'Invalid', N'Email', N'123456789', N'invalid-email', N'ID99999', N'123 Fake St', N'USA', '1990-01-01', N'Male';
 END TRY
@@ -375,7 +375,7 @@ BEGIN CATCH
 END CATCH;
 
 
--- (nieprawidlowa p³eæ) - b³¹d
+-- (nieprawidlowa pï¿½eï¿½) - bï¿½ï¿½d
 BEGIN TRY
     EXEC sp_InsertClient N'Jane', N'Malik', N'987654300', N'jane.smith@example.com', N'ID54321', N'456 Another St', N'Canada', '2000-05-15', N'Unknown';
 END TRY
@@ -411,7 +411,7 @@ BEGIN CATCH
 END CATCH;
 
 
--- (pokój ju¿ zarezerwowany) - b³¹d
+-- (pokï¿½j juï¿½ zarezerwowany) - bï¿½ï¿½d
 BEGIN TRY
     EXEC sp_InsertReservation 2, 1, '2024-12-20', '2024-12-27', '2024-12-28', N'Pending', N'Early check-in';
 END TRY
@@ -430,7 +430,7 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
--- (brak kwoty p³atnoœci) - b³¹d
+-- (brak kwoty pï¿½atnoï¿½ci) - bï¿½ï¿½d
 BEGIN TRY
     EXEC sp_InsertPayment 1, NULL, '2024-12-15', N'Credit Card';
 END TRY
@@ -439,7 +439,7 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
---(brak metody p³atnoœci) b³¹d
+--(brak metody pï¿½atnoï¿½ci) bï¿½ï¿½d
 BEGIN TRY
     EXEC sp_InsertPayment 1, 500.00, '2024-12-15', NULL;
 END TRY
@@ -473,7 +473,7 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
--- (brak klienta) - b³¹d
+-- (brak klienta) - bï¿½ï¿½d
 BEGIN TRY
     INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
     VALUES (3, NULL, '2024-12-11');
@@ -483,7 +483,7 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
--- (brak wydarzenia) - b³¹d
+-- (brak wydarzenia) - bï¿½ï¿½d
 BEGIN TRY
     INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
     VALUES (NULL, 1, '2024-12-11');
@@ -493,7 +493,7 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
--- zwraca pokoje, które nie s¹ zarezerwowane w podanym czasie
+-- zwraca pokoje, ktï¿½re nie sï¿½ zarezerwowane w podanym czasie
 SELECT r.*
 FROM [Rooms] r
 LEFT JOIN [Reservations] res
@@ -508,7 +508,7 @@ FROM [Reservations]
 GROUP BY [arrival_date]
 ORDER BY [arrival_date];
 
---liczba rezerwacji klientów
+--liczba rezerwacji klientï¿½w
 SELECT c.[name], c.[last_name], COUNT(r.[id_reservation]) AS [NumberOfReservations]
 FROM [Clients] c
 LEFT JOIN [Reservations] r
@@ -530,7 +530,7 @@ FROM Reservations r
 JOIN Clients c ON r.id_client = c.id_client;
 
 
--- widok liczby rezerwacji w ka¿dym pokoju w hotelu
+-- widok liczby rezerwacji w kaï¿½dym pokoju w hotelu
 go
 CREATE VIEW RoomReservationSummary AS
 SELECT 
@@ -543,14 +543,14 @@ LEFT JOIN Reservations res ON r.id_room = res.id_room
 GROUP BY h.hotel_name, r.id_room;
 go
 
--- zapytanie wykorzystuj¹ce widok do wyœwietlenia liczby rezerwacji w hotelach
+-- zapytanie wykorzystujï¿½ce widok do wyï¿½wietlenia liczby rezerwacji w hotelach
 SELECT * 
 FROM RoomReservationSummary
 WHERE total_reservations > 0
 ORDER BY total_reservations DESC;
 
 
---liczba uczestników ka¿dego wydarzenia:
+--liczba uczestnikï¿½w kaï¿½dego wydarzenia:
 SELECT e.event_name, COUNT(er.id_registration) AS total_participants
 FROM Events e
 LEFT JOIN EventRegistration er ON e.id_event = er.id_event

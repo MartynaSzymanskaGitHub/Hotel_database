@@ -55,7 +55,7 @@ EXECUTE AS USER = 'HotelManagerUser';
 -- Test: Pełny dostęp - zakończony powodzeniem
 SELECT * FROM [Clients]; 
 INSERT INTO [Clients] ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
-VALUES ('Test', 'Manager', '987654322', 'manager@test.com', 'ID99999', '123 Manager St', 'USA', '1990-01-01', 'Male');
+VALUES ('Martyna', 'Szymanska', '987654322', 'martyna@test.com', 'ID181102', 'Balucka 12', 'PL', '2002-11-18', 'Female');
 REVERT;
 
 -- Logowanie jako ReceptionistUser
@@ -63,7 +63,7 @@ EXECUTE AS USER = 'ReceptionistUser';
 -- Test: Odczyt i wstawianie do kluczowych tabel - zakończenie powodzeniem
 SELECT * FROM [Clients]; 
 INSERT INTO [Clients] ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
-VALUES ('Test', 'Receptionist', '987654321', 'receptionist@test.com', 'ID88888', '456 Reception St', 'UK', '1995-12-25', 'Female');
+VALUES ('Kamil', 'Winczewski', '987654321', 'kamil@test.com', 'ID260202', 'Zlota 2', 'PL', '2002-02-26', 'Male');
 
 -- Test: Brak dostępu do usuwania danych - zakończone błędem
 DELETE FROM [Clients] WHERE [name] = 'Test'; 
@@ -76,5 +76,5 @@ SELECT * FROM [Hotels];
 SELECT * FROM [Rooms]; 
 -- Test: Brak dostępu do wstawiania danych - zakończone błędem
 INSERT INTO [Clients] ([name], [last_name], [contact_number], [email], [document_number], [address], [country], [date_of_birth], [gender])
-VALUES ('Test', 'Guest', '555555555', 'guest@test.com', 'ID77777', '789 Guest St', 'France', '2000-01-01', 'Male'); 
+VALUES ('Mikolaj', 'Koperkowski', '555555555', 'mikolaj@test.com', 'ID77777', 'Swieta 5', 'PL', '2000-01-01', 'Male'); 
 REVERT;
