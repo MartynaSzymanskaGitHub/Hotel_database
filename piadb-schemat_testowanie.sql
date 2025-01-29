@@ -1,11 +1,18 @@
--- 1. Utworzenie bazy
-CREATE DATABASE HOTELDB;
-ALTER DATABASE HOTELDB COLLATE Polish_CS_AS;
+IF EXISTS (SELECT name FROM sys.databases WHERE name = N'HOTELDB')
+BEGIN
+    ALTER DATABASE HOTELDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE HOTELDB;
+END
+GO
+
+CREATE DATABASE HOTELDB
+COLLATE Polish_CS_AS;
+GO
 
 USE HOTELDB;
 GO
 
---2. Schematy baz danych
+-- Schematy baz danych
 CREATE TABLE [Hotels] (
     [id_hotel] INT IDENTITY(1,1) PRIMARY KEY,
     [hotel_name] NVARCHAR(100) NOT NULL UNIQUE,
@@ -17,6 +24,41 @@ CREATE TABLE [Hotels] (
     [ModifiedDate] DATETIME2 DEFAULT GETDATE()
 );
 GO
+
+CREATE TABLE [Roles] (
+    [id_role] INT IDENTITY(1,1) PRIMARY KEY,
+    [role_name] NVARCHAR(50) NOT NULL UNIQUE,
+    [description] NVARCHAR(200) NULL
+);
+GO
+
+CREATE TABLE [Employees] (
+    [id_employee] INT IDENTITY(1,1) PRIMARY KEY,
+    [id_hotel] INT NOT NULL,
+    [first_name] NVARCHAR(50) NOT NULL,
+    [last_name] NVARCHAR(50) NOT NULL,
+    [position] NVARCHAR(50) NOT NULL,
+    [salary] DECIMAL(18,2) NOT NULL CHECK ([salary] > 0),
+    [contact_number] NVARCHAR(15) NOT NULL UNIQUE,
+    [email] NVARCHAR(100) NOT NULL UNIQUE,
+    [date_hired] DATE NOT NULL DEFAULT GETDATE(),
+    [ModifiedDate] DATETIME2 DEFAULT GETDATE(),
+    [role_id] INT NOT NULL,
+    FOREIGN KEY ([id_hotel]) REFERENCES [Hotels]([id_hotel]),
+    FOREIGN KEY ([role_id]) REFERENCES [Roles]([id_role])
+);
+GO
+
+CREATE TABLE [SalaryChangeLog] (
+    [id_log] INT IDENTITY(1,1) PRIMARY KEY,
+    [id_employee] INT NOT NULL,
+    [old_salary] DECIMAL(18,2) NOT NULL,
+    [new_salary] DECIMAL(18,2) NOT NULL,
+    [change_date] DATETIME2 DEFAULT GETDATE(),
+    FOREIGN KEY ([id_employee]) REFERENCES [Employees]([id_employee])
+);
+GO
+
 
 CREATE TABLE [Rooms] (
     [id_room] INT IDENTITY(1,1) PRIMARY KEY,
@@ -79,12 +121,26 @@ CREATE TABLE [Payments] (
 );
 GO
 
+CREATE TABLE [Reviews] (
+    [id_review] INT IDENTITY(1,1) PRIMARY KEY,
+    [id_client] INT NOT NULL,
+    [id_hotel] INT NOT NULL,
+    [rating] INT NOT NULL CONSTRAINT DF_Reviews_Rating DEFAULT 0 CHECK ([rating] BETWEEN 1 AND 5),
+    [comments] NVARCHAR(500),
+    [review_date] DATE NOT NULL DEFAULT GETDATE(),
+    FOREIGN KEY ([id_client]) REFERENCES [Clients]([id_client]),
+    FOREIGN KEY ([id_hotel]) REFERENCES [Hotels]([id_hotel])
+);
+GO
+
 CREATE TABLE [Events] (
     [id_event] INT IDENTITY(1,1) PRIMARY KEY,
     [event_name] NVARCHAR(100) NOT NULL,
     [event_date] DATE NOT NULL,
     [location] NVARCHAR(200) NOT NULL,
-    [description] NVARCHAR(200)
+    [description] NVARCHAR(200),
+    [id_hotel] INT NOT NULL,
+    FOREIGN KEY ([id_hotel]) REFERENCES [Hotels]([id_hotel])
 );
 GO
 
@@ -103,9 +159,14 @@ CREATE NONCLUSTERED INDEX idx_fk_id_hotel ON [Rooms] ([id_hotel]);
 CREATE NONCLUSTERED INDEX idx_fk_id_client ON [Reservations] ([id_client]);
 CREATE NONCLUSTERED INDEX idx_fk_id_room ON [Facilities] ([id_room]);
 CREATE NONCLUSTERED INDEX idx_fk_id_reservation ON [Payments] ([id_reservation]);
+CREATE NONCLUSTERED INDEX idx_fk_id_hotel_events ON [Events] ([id_hotel]);
+CREATE NONCLUSTERED INDEX idx_fk_id_hotel_employees ON [Employees] ([id_hotel]);
+CREATE NONCLUSTERED INDEX idx_fk_role_id_employees ON [Employees] ([role_id]);
+CREATE NONCLUSTERED INDEX idx_fk_id_client_reviews ON [Reviews] ([id_client]);
+CREATE NONCLUSTERED INDEX idx_fk_id_hotel_reviews ON [Reviews] ([id_hotel]);
 GO
 
--- 4. Tworzenie triggerów
+--  Tworzenie triggerow
 CREATE TRIGGER trg_UpdateModifiedDate ON [Hotels]
 AFTER UPDATE
 AS
@@ -113,6 +174,16 @@ BEGIN
     UPDATE [Hotels]
     SET [ModifiedDate] = GETDATE()
     WHERE [id_hotel] IN (SELECT DISTINCT [id_hotel] FROM Inserted);
+END;
+GO
+
+CREATE TRIGGER trg_UpdateModifiedDate_Employees ON [Employees]
+AFTER UPDATE
+AS
+BEGIN
+    UPDATE [Employees]
+    SET [ModifiedDate] = GETDATE()
+    WHERE [id_employee] IN (SELECT DISTINCT [id_employee] FROM Inserted);
 END;
 GO
 
@@ -141,6 +212,24 @@ BEGIN
         )
         FROM [Hotels] h
         JOIN Deleted d ON h.[id_hotel] = d.[id_hotel];
+    END
+END;
+GO
+
+CREATE TRIGGER trg_LogSalaryChanges ON [Employees]
+AFTER UPDATE
+AS
+BEGIN
+    IF UPDATE([salary])
+    BEGIN
+        INSERT INTO [SalaryChangeLog] ([id_employee], [old_salary], [new_salary])
+        SELECT 
+            d.[id_employee],
+            d.[salary],
+            i.[salary]
+        FROM Deleted d
+        JOIN Inserted i ON d.[id_employee] = i.[id_employee]
+        WHERE d.[salary] <> i.[salary];
     END
 END;
 GO
@@ -180,27 +269,10 @@ BEGIN
 END;
 GO
 
--- 5. Tworzenie procedur
-CREATE PROCEDURE sp_InsertHotel
-    @hotel_name NVARCHAR(100),
-    @country NVARCHAR(100),
-    @address NVARCHAR(200),
-    @total_rooms INT,
-    @manager_name NVARCHAR(100),
-    @contact_number NVARCHAR(15)
-AS
-BEGIN
-    BEGIN TRY
-        INSERT INTO [Hotels] ([hotel_name], [country], [address], [total_rooms], [manager_name], [contact_number])
-        VALUES (@hotel_name, @country, @address, @total_rooms, @manager_name, @contact_number);
-    END TRY
-    BEGIN CATCH
-        THROW;
-    END CATCH;
-END;
-GO
 
-CREATE OR ALTER PROCEDURE sp_InsertClient
+
+-- Tworzenie procedur
+CREATE OR ALTER PROCEDURE sp_InsertClient_toBase
     @name NVARCHAR(50),
     @last_name NVARCHAR(50),
     @contact_number NVARCHAR(15),
@@ -237,6 +309,158 @@ BEGIN
     END CATCH;
 END;
 GO
+
+CREATE OR ALTER PROCEDURE sp_InsertRole
+    @role_name NVARCHAR(50),
+    @description NVARCHAR(200) = NULL
+AS
+BEGIN
+    BEGIN TRY
+        INSERT INTO [Roles] ([role_name], [description])
+        VALUES (@role_name, @description);
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+CREATE OR ALTER PROCEDURE sp_InsertEmployee
+    @id_hotel INT,
+    @first_name NVARCHAR(50),
+    @last_name NVARCHAR(50),
+    @position NVARCHAR(50),
+    @salary DECIMAL(18,2),
+    @contact_number NVARCHAR(15),
+    @email NVARCHAR(100),
+    @date_hired DATE,
+    @role_id INT
+AS
+BEGIN
+    BEGIN TRY
+        INSERT INTO [Employees] (
+            [id_hotel], [first_name], [last_name], [position], [salary],
+            [contact_number], [email], [date_hired], [role_id]
+        )
+        VALUES (
+            @id_hotel, @first_name, @last_name, @position, @salary,
+            @contact_number, @email, @date_hired, @role_id
+        );
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_InsertReview
+    @id_client INT,
+    @id_hotel INT,
+    @rating INT,
+    @comments NVARCHAR(500)
+AS
+BEGIN
+    BEGIN TRY
+        -- Sprawdzenie poprawnoœci oceny
+        IF @rating < 1 OR @rating > 5
+        BEGIN
+            RAISERROR('Rating must be between 1 and 5.', 16, 1);
+            RETURN;
+        END
+
+        -- Sprawdzenie istnienia klienta
+        IF NOT EXISTS (SELECT 1 FROM [Clients] WHERE [id_client] = @id_client)
+        BEGIN
+            RAISERROR('Client does not exist.', 16, 1);
+            RETURN;
+        END
+
+        -- Sprawdzenie istnienia hotelu
+        IF NOT EXISTS (SELECT 1 FROM [Hotels] WHERE [id_hotel] = @id_hotel)
+        BEGIN
+            RAISERROR('Hotel does not exist.', 16, 1);
+            RETURN;
+        END
+
+        INSERT INTO [Reviews] ([id_client], [id_hotel], [rating], [comments])
+        VALUES (@id_client, @id_hotel, @rating, @comments);
+    END TRY
+    BEGIN CATCH
+        -- Wyœwietlenie b³êdu
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+CREATE OR ALTER PROCEDURE sp_UpdateEmployee
+    @id_employee INT,
+    @id_hotel INT = NULL,
+    @first_name NVARCHAR(50) = NULL,
+    @last_name NVARCHAR(50) = NULL,
+    @position NVARCHAR(50) = NULL,
+    @salary DECIMAL(18,2) = NULL,
+    @contact_number NVARCHAR(15) = NULL,
+    @email NVARCHAR(100) = NULL,
+    @date_hired DATE = NULL,
+    @role_id INT = NULL
+AS
+BEGIN
+    BEGIN TRY
+        UPDATE [Employees]
+        SET 
+            [id_hotel] = COALESCE(@id_hotel, [id_hotel]),
+            [first_name] = COALESCE(@first_name, [first_name]),
+            [last_name] = COALESCE(@last_name, [last_name]),
+            [position] = COALESCE(@position, [position]),
+            [salary] = COALESCE(@salary, [salary]),
+            [contact_number] = COALESCE(@contact_number, [contact_number]),
+            [email] = COALESCE(@email, [email]),
+            [date_hired] = COALESCE(@date_hired, [date_hired]),
+            [role_id] = COALESCE(@role_id, [role_id])
+        WHERE [id_employee] = @id_employee;
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_DeleteEmployee
+    @id_employee INT
+AS
+BEGIN
+    BEGIN TRY
+        DELETE FROM [Employees]
+        WHERE [id_employee] = @id_employee;
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+CREATE PROCEDURE sp_InsertHotel
+    @hotel_name NVARCHAR(100),
+    @country NVARCHAR(100),
+    @address NVARCHAR(200),
+    @total_rooms INT,
+    @manager_name NVARCHAR(100),
+    @contact_number NVARCHAR(15)
+AS
+BEGIN
+    BEGIN TRY
+        INSERT INTO [Hotels] ([hotel_name], [country], [address], [total_rooms], [manager_name], [contact_number])
+        VALUES (@hotel_name, @country, @address, @total_rooms, @manager_name, @contact_number);
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
+END;
+GO
+
 
 CREATE PROCEDURE sp_InsertRoom
     @id_hotel INT,
@@ -294,98 +518,76 @@ BEGIN
 END;
 GO
 
--- 6. Wstawianie przyk³adowych danych
+CREATE PROCEDURE sp_InsertEvent
+    @event_name NVARCHAR(100),
+    @event_date DATE,
+    @location NVARCHAR(200),
+    @description NVARCHAR(200),
+    @id_hotel INT
+AS
+BEGIN
+    BEGIN TRY
+        INSERT INTO [Events] ([event_name], [event_date], [location], [description], [id_hotel])
+        VALUES (@event_name, @event_date, @location, @description, @id_hotel);
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
+END;
+GO
 
--- poprawne
+-- widok recenzji hoteli
+CREATE OR ALTER VIEW AverageHotelRatings AS
+SELECT 
+    h.hotel_name,
+    AVG(CAST(r.rating AS FLOAT)) AS average_rating
+FROM 
+    Hotels h
+LEFT JOIN 
+    Reviews r ON h.id_hotel = r.id_hotel
+GROUP BY 
+    h.hotel_name;
+GO
+
+
+
+--  Wstawianie przykladowych danych
+
+-- wstawianie hoteli
 BEGIN TRY
-    EXEC sp_InsertHotel N'Hotel Paradise', N'USA', N'101 Sunset Blvd', 50, N'Alice Green', N'123456789';
-    EXEC sp_InsertHotel N'Grand Royal', N'UK', N'102 High Street', 80, N'John Brown', N'987654321';
-    EXEC sp_InsertHotel N'Empty Hotel', N'France', N'104 Rivoli', 1, N'Sophia White', N'789123456';
-    EXEC sp_InsertHotel N'Hotel Atlantis', N'Germany', N'105 Oceanview', 120, N'Emma Brown', N'123456780';
+    EXEC sp_InsertHotel N'Hotel Paradise', N'PL', N'Radwanska 102', 50, N'Kamil Winczewski', N'123456789';
+    EXEC sp_InsertHotel N'Grand Royal', N'UK', N'London street 2', 80, N'Martyna Szymanska', N'987654321';
+    EXEC sp_InsertHotel N'Empty Hotel', N'France', N'Ravioli 104', 1, N'Maria Curie', N'789123456';
+    EXEC sp_InsertHotel N'Hotel Berlin', N'Germany', N'Heise strase 2', 120, N'John French', N'123456780';
 END TRY
 BEGIN CATCH
     PRINT 'Error inserting data to Hotel';
     THROW;
 END CATCH;
 
--- (duplikat nazwy hotelu) - b³¹d
-BEGIN TRY
-    EXEC sp_InsertHotel N'Hotel Paradise', N'Canada', N'103 Maple Ave', 60, N'David Smith', N'456789123';
-END TRY
-BEGIN CATCH
-    PRINT 'Error: Given name is already in base!';
-    THROW;
-END CATCH;
-
--- poprawne
+-- wstawianie pokoi
 BEGIN TRY
     EXEC sp_InsertRoom 1, 150.00, 2, 2, 30.00, N'Deluxe room with balcony';
     EXEC sp_InsertRoom 1, 180.00, 3, 1, 20.00, N'Single room with city view';
-    EXEC sp_InsertRoom 2, 300.00, 5, 3, 55.00, N'Family suite with kitchenette';
+    EXEC sp_InsertRoom 2, 300.00, 5, 3, 55.00, N'Family suite with kitchen';
 END TRY
 BEGIN CATCH
     PRINT 'Error inserting data to Rooms';
     THROW;
 END CATCH;
 
--- (negatywna cena) - b³¹d
-BEGIN TRY
-    EXEC sp_InsertRoom 1, -50.00, 1, 1, 20.00, N'Single room';
-END TRY
-BEGIN CATCH
-    PRINT 'Error: invalid price!';
-    THROW;
-END CATCH;
 
--- (liczba ³ó¿ek poni¿ej 1) -  b³¹d
+-- Wstawianie przyk³¹dowych klientow
 BEGIN TRY
-    EXEC sp_InsertRoom 1, 120.00, 3, 0, 25.00, N'Small room';
-END TRY
-BEGIN CATCH
-    PRINT 'Error: Given bed number must be positive!';
-    THROW;
-END CATCH;
-
--- poprawne
-BEGIN TRY
-    EXEC sp_InsertClient N'John', N'Doe', N'123456789', N'john.doe@example.com', N'ID12345', N'123 Main St', N'USA', '2000-01-01', N'Male';
-    EXEC sp_InsertClient N'Sophia', N'Davis', N'234567891', N'sophia.davis@example.com', N'ID54321', N'234 Elm St', N'USA', '1990-03-15', N'Female';
+    EXEC sp_InsertClient_toBase N'Marek', N'Cebula', N'123456789', N'm.cebula@example.com', N'ID12345', N'Nowa 15', N'Poland', '2000-01-01', N'Male';
+    EXEC sp_InsertClient_toBase N'Zosia', N'Burek', N'234567891', N'zosia.bulp@example.com', N'ID54321', N'Stara 1', N'Poland', '1990-03-15', N'Female';
 END TRY
 BEGIN CATCH
     PRINT 'Error inserting data to Clients';
     THROW;
 END CATCH;
 
--- (niepe³noletni klient) - b³¹d
-BEGIN TRY
-    EXEC sp_InsertClient N'Jane', N'Smith', N'987654321', N'jane.smith@example.com', N'ID54321', N'456 Another St', N'Canada', '2010-05-15', N'Female';
-END TRY
-BEGIN CATCH
-    PRINT 'Error: Client underage!';
-    THROW;
-END CATCH;
-
--- (nieprawid³owy adres e-mail) - b³¹d
-BEGIN TRY
-    EXEC sp_InsertClient N'Invalid', N'Email', N'123456789', N'invalid-email', N'ID99999', N'123 Fake St', N'USA', '1990-01-01', N'Male';
-END TRY
-BEGIN CATCH
-    PRINT 'Error: invalid address e-mail format!';
-    THROW;
-END CATCH;
-
-
--- (nieprawidlowa p³eæ) - b³¹d
-BEGIN TRY
-    EXEC sp_InsertClient N'Jane', N'Malik', N'987654300', N'jane.smith@example.com', N'ID54321', N'456 Another St', N'Canada', '2000-05-15', N'Unknown';
-END TRY
-BEGIN CATCH
-    PRINT 'Error: Invalid data! Different from : Male, Female, Other!';
-    THROW;
-END CATCH;
-
-
--- poprawne
+-- wstawianie rezerwacji
 BEGIN TRY
     EXEC sp_InsertReservation 
         @id_client = 1, 
@@ -410,17 +612,7 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
-
--- (pokój ju¿ zarezerwowany) - b³¹d
-BEGIN TRY
-    EXEC sp_InsertReservation 2, 1, '2024-12-20', '2024-12-27', '2024-12-28', N'Pending', N'Early check-in';
-END TRY
-BEGIN CATCH
-    PRINT 'Error: Room is already reserved!';
-    THROW;
-END CATCH;
-
--- poprawne
+-- wstawianie platnosci
 BEGIN TRY
     EXEC sp_InsertPayment 1, 900.00, '2024-12-15', N'Credit Card';
     EXEC sp_InsertPayment 2, 1800.00, '2024-12-20', N'Bank Transfer';
@@ -430,38 +622,20 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
--- (brak kwoty p³atnoœci) - b³¹d
+-- wstawianie eventu
 BEGIN TRY
-    EXEC sp_InsertPayment 1, NULL, '2024-12-15', N'Credit Card';
-END TRY
-BEGIN CATCH
-    PRINT 'Error: Missing payment value!';
-    THROW;
-END CATCH;
-
---(brak metody p³atnoœci) b³¹d
-BEGIN TRY
-    EXEC sp_InsertPayment 1, 500.00, '2024-12-15', NULL;
-END TRY
-BEGIN CATCH
-    PRINT 'Error: missing payment type!';
-    THROW;
-END CATCH;
-
--- poprawne
-BEGIN TRY
-    INSERT INTO [Events] ([event_name], [event_date], [location], [description])
+    INSERT INTO [Events] ([event_name], [event_date], [location], [description],[id_hotel])
     VALUES
-    (N'Christmas Gala', '2024-12-24', N'Main Ballroom', N'A grand Christmas celebration'),
-    (N'Corporate Retreat', '2024-12-15', N'Conference Room', N'A retreat for corporate teams'),
-    (N'New Year Party', '2024-12-31', N'Rooftop Terrace', N'Celebrate the New Year with us!');
+    (N'Christmas Gala', '2024-12-24', N'Main Ballroom', N'Christmas celebration', 1),
+    (N'Corporate Retreat', '2024-12-15', N'Conference Room', N'Spotkanie przy herbacie', 2),
+    (N'New Year Party', '2024-12-31', N'Rooftop Terrace', N'Impreza nowego roku!', 1);
 END TRY
 BEGIN CATCH
     PRINT 'Error: inserting data to Events';
     THROW;
 END CATCH;
 
--- poprawne
+-- wstawianie rezerwacji eventu 
 BEGIN TRY
     INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
     VALUES
@@ -473,27 +647,121 @@ BEGIN CATCH
     THROW;
 END CATCH;
 
--- (brak klienta) - b³¹d
+-- wstawianie rol pracownikow
 BEGIN TRY
-    INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
-    VALUES (3, NULL, '2024-12-11');
+    EXEC sp_InsertRole @role_name = N'Receptionist', @description = N'Handles front desk operations';
+    EXEC sp_InsertRole @role_name = N'Housekeeper', @description = N'Responsible for cleaning rooms';
+    EXEC sp_InsertRole @role_name = N'Manager', @description = N'Oversees hotel operations';
+    EXEC sp_InsertRole @role_name = N'Chef', @description = N'In charge of the kitchen and meal preparations';
 END TRY
 BEGIN CATCH
-    PRINT 'Error: missing client data!';
+    PRINT 'Error inserting data into Roles';
     THROW;
 END CATCH;
+GO
 
--- (brak wydarzenia) - b³¹d
+-- dodawanie pracowników
 BEGIN TRY
-    INSERT INTO [EventRegistration] ([id_event], [id_client], [registration_date])
-    VALUES (NULL, 1, '2024-12-11');
+    EXEC sp_InsertEmployee 
+        @id_hotel = 1,
+        @first_name = N'Anna',
+        @last_name = N'Lewandowska',
+        @position = N'Receptionist',
+        @salary = 2500.00,
+        @contact_number = N'555123456',
+        @email = N'anna.nowak@hotelparadise.com',
+        @date_hired = '2023-06-15',
+        @role_id = 1; -- recepcja
+    
+    EXEC sp_InsertEmployee 
+        @id_hotel = 1,
+        @first_name = N'Piotr',
+        @last_name = N'Nowak',
+        @position = N'Housekeeper',
+        @salary = 2200.00,
+        @contact_number = N'555654321',
+        @email = N'piotr.kowalski@hotelparadise.com',
+        @date_hired = '2022-04-10',
+        @role_id = 2; -- sprzataczka
+    
+    EXEC sp_InsertEmployee 
+        @id_hotel = 2,
+        @first_name = N'El¿bieta',
+        @last_name = N'Szymanska',
+        @position = N'Manager',
+        @salary = 4500.00,
+        @contact_number = N'555987654',
+        @email = N'elzbieta.szymanska@grandroyal.com',
+        @date_hired = '2020-01-20',
+        @role_id = 3; -- menager
+    
+    EXEC sp_InsertEmployee 
+        @id_hotel = 3,
+        @first_name = N'Marcin',
+        @last_name = N'Lewandowski',
+        @position = N'Chef',
+        @salary = 4000.00,
+        @contact_number = N'555456789',
+        @email = N'marcin.lewandowski@emptyhotel.com',
+        @date_hired = '2023-09-05',
+        @role_id = 4;--chef
 END TRY
 BEGIN CATCH
-    PRINT 'Error: invalid event!';
+    PRINT 'Error inserting data into Employees';
     THROW;
 END CATCH;
+GO
 
--- zwraca pokoje, które nie s¹ zarezerwowane w podanym czasie
+-- dodanie recenzji
+BEGIN TRY
+    EXEC sp_InsertReview 
+        @id_client = 1, 
+        @id_hotel = 1, 
+        @rating = 5, 
+        @comments = N'Excellent service and comfortable rooms!';
+    
+    EXEC sp_InsertReview 
+        @id_client = 2, 
+        @id_hotel = 2, 
+        @rating = 4, 
+        @comments = N'Great location but the room was a bit small.';
+
+	EXEC sp_InsertReview 
+        @id_client = 2, 
+        @id_hotel = 3, 
+        @rating = 5, 
+        @comments = N'Great location but the room was a bit small.';
+	
+	EXEC sp_InsertReview 
+        @id_client = 2, 
+        @id_hotel = 4, 
+        @rating = 3, 
+        @comments = N'Great location but the room was a bit small.';
+END TRY
+BEGIN CATCH
+    PRINT 'Error inserting data into Reviews';
+    THROW;
+END CATCH;
+GO
+
+-- dodanie smiany wynagrodzenia pracownika
+BEGIN TRY
+    EXEC sp_UpdateEmployee 
+        @id_employee = 1, 
+        @salary = 2600.00;
+END TRY
+BEGIN CATCH
+    PRINT 'Error updating employee salary';
+    THROW;
+END CATCH;
+GO
+
+-- sprawdzenie zmian w pensjach
+SELECT * FROM [SalaryChangeLog];
+GO
+
+
+-- zwraca pokoje, ktore nie sa zarezerwowane w podanym czasie
 SELECT r.*
 FROM [Rooms] r
 LEFT JOIN [Reservations] res
@@ -508,7 +776,7 @@ FROM [Reservations]
 GROUP BY [arrival_date]
 ORDER BY [arrival_date];
 
---liczba rezerwacji klientów
+--liczba rezerwacji klientow
 SELECT c.[name], c.[last_name], COUNT(r.[id_reservation]) AS [NumberOfReservations]
 FROM [Clients] c
 LEFT JOIN [Reservations] r
@@ -530,7 +798,7 @@ FROM Reservations r
 JOIN Clients c ON r.id_client = c.id_client;
 
 
--- widok liczby rezerwacji w ka¿dym pokoju w hotelu
+-- widok liczby rezerwacji w kazdym pokoju w hotelu
 go
 CREATE VIEW RoomReservationSummary AS
 SELECT 
@@ -543,16 +811,20 @@ LEFT JOIN Reservations res ON r.id_room = res.id_room
 GROUP BY h.hotel_name, r.id_room;
 go
 
--- zapytanie wykorzystuj¹ce widok do wyœwietlenia liczby rezerwacji w hotelach
+-- zapytanie wykorzystujuce widok do wyswietlenia liczby rezerwacji w hotelach
 SELECT * 
 FROM RoomReservationSummary
 WHERE total_reservations > 0
 ORDER BY total_reservations DESC;
 
 
---liczba uczestników ka¿dego wydarzenia:
+--liczba uczestnikow kazdego wydarzenia:
 SELECT e.event_name, COUNT(er.id_registration) AS total_participants
 FROM Events e
 LEFT JOIN EventRegistration er ON e.id_event = er.id_event
 GROUP BY e.event_name
 ORDER BY total_participants DESC;
+
+
+-- pokazanie œrednich ocen hoteli
+SELECT * from AverageHotelRatings;
